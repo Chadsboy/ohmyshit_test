@@ -14,14 +14,6 @@ import {
   Radio,
   FormControlLabel,
   Alert,
-  Box,
-  Typography,
-  Checkbox,
-  Select,
-  MenuItem,
-  InputLabel,
-  FormHelperText,
-  CircularProgress,
 } from "@mui/material";
 import { DatePicker } from "@mui/x-date-pickers";
 import dayjs, { Dayjs } from "dayjs";
@@ -62,9 +54,6 @@ const EventForm: React.FC<EventFormProps> = ({
   const [date, setDate] = useState<Dayjs | null>(
     initialData?.date ? dayjs(initialData.date) : selectedDate || dayjs()
   );
-  const [eventTitle, setEventTitle] = useState(
-    initialData?.title || "배변 기록"
-  );
   const [description, setDescription] = useState(
     initialData?.description || ""
   );
@@ -80,7 +69,6 @@ const EventForm: React.FC<EventFormProps> = ({
   useEffect(() => {
     if (initialData) {
       setDate(dayjs(initialData.date));
-      setEventTitle(initialData.title);
       setDescription(initialData.description);
 
       // initialData에서 시간 파싱

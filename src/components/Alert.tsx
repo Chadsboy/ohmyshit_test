@@ -9,12 +9,6 @@ import {
 } from "@mui/material";
 import { NewReleases } from "@mui/icons-material";
 
-// 텍스트 페이드 효과
-const fadeIn = keyframes`
-  0% { opacity: 0; transform: translateY(5px); }
-  100% { opacity: 1; transform: translateY(0); }
-`;
-
 // 텍스트 슬라이드 애니메이션 (오른쪽에서 중앙으로)
 const slideInKeyframes = keyframes`
   0% { transform: translateX(100%); }
