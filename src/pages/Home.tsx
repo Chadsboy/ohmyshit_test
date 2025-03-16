@@ -8,6 +8,7 @@ import {
 } from "@mui/material";
 import Timer from "../components/Timer";
 import Alert from "../components/Alert";
+import homeImage from "../assets/home.png";
 
 const Home = () => {
   const [isTimerActive, setIsTimerActive] = useState(false);
@@ -57,7 +58,7 @@ const Home = () => {
             }}
           >
             <img
-              src="./src/assets/home.png"
+              src={homeImage}
               alt="홈페이지 이미지"
               style={{
                 width: "100%",

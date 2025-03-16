@@ -75,8 +75,8 @@ CREATE POLICY "Users can delete their own events" ON events
 - Supabase 프로젝트의 URL과 anon key를 `.env` 파일에 입력합니다.
 
 ```
-VITE_SUPABASE_URL=your_supabase_url_here
-VITE_SUPABASE_ANON_KEY=your_supabase_anon_key_here
+VITE_SUPABASE_URL=https://mudbrhhlmwlfjkylyuci.supabase.co
+VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im11ZGJyaGhsbXdsZmpreWx5dWNpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDE2NjY1OTgsImV4cCI6MjA1NzI0MjU5OH0.Mu-VIpNUAVvRrZdcmAj7q_pvKUsGN1QXloQe3uGK3tQ
 ```
 
 5. 개발 서버 실행
