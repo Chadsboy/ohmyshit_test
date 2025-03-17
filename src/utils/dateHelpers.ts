@@ -6,6 +6,9 @@ import timezone from "dayjs/plugin/timezone";
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
+// 한국 시간대를 기본값으로 설정
+dayjs.tz.setDefault("Asia/Seoul");
+
 // 한국 시간대 상수
 export const KOREA_TIMEZONE = "Asia/Seoul";
 
@@ -19,7 +22,8 @@ export const toKoreanTime = (
   utcTime: string | Date,
   format: string = "YYYY-MM-DD HH:mm:ss"
 ): string => {
-  return dayjs(utcTime).tz(KOREA_TIMEZONE).format(format);
+  // UTC 시간으로 명시적으로 파싱한 후 한국 시간대로 변환
+  return dayjs.utc(utcTime).tz(KOREA_TIMEZONE).format(format);
 };
 
 /**
@@ -32,6 +36,7 @@ export const toUTCTime = (
   koreanTime: string | Date,
   format?: string
 ): string => {
+  // 한국 시간대로 명시적으로 파싱
   const dt = dayjs.tz(koreanTime, KOREA_TIMEZONE);
   return format ? dt.utc().format(format) : dt.utc().toISOString();
 };
@@ -57,6 +62,24 @@ export const getCurrentKoreanTime = (
   format: string = "YYYY-MM-DD HH:mm:ss"
 ): string => {
   return dayjs().tz(KOREA_TIMEZONE).format(format);
+};
+
+/**
+ * UTC 날짜를 한국 날짜로 변환합니다 (날짜만 변환).
+ * @param utcDate UTC 날짜
+ * @returns 한국 날짜 (YYYY-MM-DD 형식)
+ */
+export const getKoreanDate = (utcDate: string | Date): string => {
+  return dayjs.utc(utcDate).tz(KOREA_TIMEZONE).format("YYYY-MM-DD");
+};
+
+/**
+ * UTC 시간을 한국 시간으로 변환합니다 (시간만 변환).
+ * @param utcTime UTC 시간
+ * @returns 한국 시간 (HH:mm 형식)
+ */
+export const getKoreanTime = (utcTime: string | Date): string => {
+  return dayjs.utc(utcTime).tz(KOREA_TIMEZONE).format("HH:mm");
 };
 
 /**

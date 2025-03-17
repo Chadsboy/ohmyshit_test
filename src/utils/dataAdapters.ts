@@ -6,6 +6,8 @@ import {
   toKoreanTime,
   koreanDateTimeToUTC,
   KOREA_TIMEZONE,
+  getKoreanDate,
+  getKoreanTime,
 } from "./dateHelpers";
 
 // dayjs에 플러그인 추가
@@ -22,19 +24,18 @@ dayjs.tz.setDefault(KOREA_TIMEZONE);
 export const bowelRecordToCalendarEvent = (
   record: BowelRecord
 ): CalendarEvent => {
-  // UTC 시간을 한국 시간으로 변환 (데이터베이스에는 UTC로 저장되어 있음)
-  const koreaTime = dayjs.utc(record.start_time).tz(KOREA_TIMEZONE);
+  // UTC 시간을 한국 시간으로 명시적으로 변환 (데이터베이스에는 UTC로 저장되어 있음)
+  // 명시적으로 UTC로 파싱한 후 한국 시간대로 변환
+  const startTimeUTC = record.start_time;
 
-  // 날짜는 한국 시간 기준으로 추출 (YYYY-MM-DD 형식)
-  const date = koreaTime.format("YYYY-MM-DD");
-
-  // 시간도 한국 시간으로 변환
-  const startTime = koreaTime.format("HH:mm");
+  // 날짜와 시간을 각각 한국 시간으로 변환
+  const koreanDate = getKoreanDate(startTimeUTC);
+  const koreanTime = getKoreanTime(startTimeUTC);
 
   // 성공/실패 상태와 배변량에 따라 제목 생성
   let title = record.success
-    ? `배변 성공 (${startTime})`
-    : `배변 시도 (${startTime})`;
+    ? `배변 성공 (${koreanTime})`
+    : `배변 시도 (${koreanTime})`;
 
   if (record.success && record.amount) {
     title += ` - ${record.amount}`;
@@ -47,16 +48,16 @@ export const bowelRecordToCalendarEvent = (
   }
 
   // 로깅 추가
-  console.log("변환 전 record_date:", record.record_date);
-  console.log("변환 전 start_time:", record.start_time);
-  console.log("변환 후 한국 날짜:", date);
-  console.log("변환 후 한국 시간:", startTime);
+  console.log("변환 전 UTC 시간:", startTimeUTC);
+  console.log("변환 후 한국 날짜:", koreanDate);
+  console.log("변환 후 한국 시간:", koreanTime);
+  console.log("전체 한국 시간:", toKoreanTime(startTimeUTC));
 
   return {
     id: record.id,
     title,
     description,
-    date, // 한국 시간 기준 날짜
+    date: koreanDate, // 한국 시간 기준 날짜
     created_at: record.created_at,
     user_id: record.user_id,
   };

@@ -33,7 +33,7 @@ const StyledBadge = styled(Badge)(({ theme }) => ({
 const ServerDay: React.FC<ServerDayProps> = (props) => {
   const { highlightedDays = [], day, outsideCurrentMonth, ...other } = props;
 
-  // 한국 시간대 기준으로 날짜 포맷
+  // 한국 시간대 기준으로 날짜 포맷 (명시적으로 UTC에서 변환)
   const formattedDate = day.tz(KOREA_TIMEZONE).format("YYYY-MM-DD");
 
   // 해당 날짜에 이벤트가 있는지 확인
