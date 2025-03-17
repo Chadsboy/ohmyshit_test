@@ -156,7 +156,12 @@ const Timer: React.FC<TimerProps> = ({
     setActive(false); // 타이머 비활성화
     setTimerEndTime(new Date()); // 종료 시간 기록
     onTimerStateChange && onTimerStateChange(false); // Alert 숨기기
-    setOpenResultModal(true);
+    setOpenResultModal(true); // 결과 모달 열기
+  };
+
+  // 결과 모달 닫기
+  const handleCloseResultModal = () => {
+    setOpenResultModal(false);
   };
 
   // 콘텐츠 모달 열기
@@ -552,10 +557,10 @@ const Timer: React.FC<TimerProps> = ({
         </Paper>
       )}
 
-      {/* 결과 입력 모달 */}
+      {/* 결과 모달 */}
       <ResultModal
         open={openResultModal}
-        onClose={() => setOpenResultModal(false)}
+        onClose={handleCloseResultModal}
         onSuccess={handleSuccess}
         onFail={handleFail}
         isSaving={isSaving}

@@ -19,7 +19,7 @@ export const useTimerStore = create<TimerState>()(
   persist(
     (set) => ({
       isActive: false,
-      time: 25 * 60, // 25분
+      time: 8 * 60, // 8분
       timerStartTime: null,
       timerEndTime: null,
       hasAddedTime: false,
@@ -31,7 +31,7 @@ export const useTimerStore = create<TimerState>()(
       resetTimer: () =>
         set({
           isActive: false,
-          time: 25 * 60,
+          time: 8 * 60,
           timerStartTime: null,
           timerEndTime: null,
           hasAddedTime: false,
@@ -39,6 +39,7 @@ export const useTimerStore = create<TimerState>()(
     }),
     {
       name: "timer-storage",
+      partialize: (state) => ({ time: state.time }), // time만 저장하고 나머지는 초기화
     }
   )
 );
