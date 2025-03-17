@@ -102,11 +102,9 @@ const Timer: React.FC<TimerProps> = ({
 
     if (isActive && time > 0) {
       interval = setInterval(() => {
-        setTime((prevTime) => {
-          setSecondChanged(true);
-          setTimeout(() => setSecondChanged(false), 500);
-          return prevTime - 1;
-        });
+        setTime(time - 1);
+        setSecondChanged(true);
+        setTimeout(() => setSecondChanged(false), 500);
       }, 1000);
     } else if (time === 0) {
       setActive(false);
