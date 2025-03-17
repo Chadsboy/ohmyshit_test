@@ -128,7 +128,7 @@ const Timer: React.FC<TimerProps> = ({
   // 시간 추가 (1분)
   const addTime = () => {
     if (!hasAddedTime) {
-      setTime((prevTime) => prevTime + 60); // 1분(60초) 추가
+      setTime(time + 60); // 1분(60초) 추가
       setHasAddedTime(true); // 한 번만 추가할 수 있도록 설정
       // 추가 시간 상태를 재설정하는 타임아웃 설정하지 않음 (한 번만 사용 가능)
     }
