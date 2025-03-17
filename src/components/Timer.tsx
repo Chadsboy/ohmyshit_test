@@ -68,7 +68,7 @@ interface TimerProps {
 type StoolAmount = "많음" | "보통" | "적음" | "이상" | "";
 
 const Timer: React.FC<TimerProps> = ({
-  initialTime = 25 * 60,
+  initialTime = 8 * 60,
   noBackground = false,
   onTimerStateChange,
 }) => {

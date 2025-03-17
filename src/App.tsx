@@ -28,7 +28,10 @@ import {
 } from "@mui/icons-material";
 import { supabase } from "./lib/supabase";
 import { Layout } from "./components/layout/Layout";
-import TimerStatus from "./components/TimerStatus";
+import { ThemeProvider, CssBaseline } from "@mui/material";
+import { theme } from "./theme";
+import Statistics from "./pages/Statistics";
+import Settings from "./pages/Settings";
 
 // 네비게이션 아이템 값 상수
 const NAV_HOME = "home";
@@ -160,37 +163,45 @@ const AuthenticatedApp = () => {
   };
 
   return (
-    <Layout
-      value={currentNav}
-      onChange={handleNavChange}
-      items={navigationItems}
-      title="건강도우미"
-    >
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/explore" element={<Explore />} />
-        <Route path="/foods" element={<Foods />} />
-        <Route path="/calendar" element={<Calendar />} />
-        <Route path="/shop" element={<Shop />} />
-        <Route path="/manual" element={<Manual />} />
-        <Route path="/help" element={<Help />} />
-        <Route path="/contact" element={<Contact />} />
-        <Route path="/profile" element={<Profile />} />
-        <Route
-          path="/chat"
-          element={
-            <Box sx={{ p: 3, textAlign: "center" }}>
-              <Typography variant="h5">채팅 페이지</Typography>
-              <Typography variant="body1" color="text.secondary" sx={{ mt: 2 }}>
-                이 기능은 개발 중입니다.
-              </Typography>
-            </Box>
-          }
-        />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-      <TimerStatus />
-    </Layout>
+    <ThemeProvider theme={theme}>
+      <CssBaseline />
+      <Layout
+        value={currentNav}
+        onChange={handleNavChange}
+        items={navigationItems}
+        title="건강도우미"
+      >
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/explore" element={<Explore />} />
+          <Route path="/foods" element={<Foods />} />
+          <Route path="/calendar" element={<Calendar />} />
+          <Route path="/shop" element={<Shop />} />
+          <Route path="/manual" element={<Manual />} />
+          <Route path="/help" element={<Help />} />
+          <Route path="/contact" element={<Contact />} />
+          <Route path="/profile" element={<Profile />} />
+          <Route
+            path="/chat"
+            element={
+              <Box sx={{ p: 3, textAlign: "center" }}>
+                <Typography variant="h5">채팅 페이지</Typography>
+                <Typography
+                  variant="body1"
+                  color="text.secondary"
+                  sx={{ mt: 2 }}
+                >
+                  이 기능은 개발 중입니다.
+                </Typography>
+              </Box>
+            }
+          />
+          <Route path="/statistics" element={<Statistics />} />
+          <Route path="/settings" element={<Settings />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </Layout>
+    </ThemeProvider>
   );
 };
 
