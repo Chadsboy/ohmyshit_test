@@ -71,7 +71,7 @@ const Home = () => {
 
           {/* 타이머 컴포넌트 */}
           <Timer
-            initialTime={15 * 60}
+            initialTime={8 * 60}
             noBackground
             onTimerStateChange={handleTimerStateChange}
           />

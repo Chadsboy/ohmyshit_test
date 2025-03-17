@@ -3,7 +3,20 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta
+      name="apple-mobile-web-app-status-bar-style"
+      content="black-translucent"
+    />
+    <meta name="theme-color" content="#ffffff" />
+    <meta name="description" content="건강 관리 타이머 앱" />
+    <meta name="apple-mobile-web-app-title" content="OMS" />
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="apple-touch-icon" href="/icon-192x192.png" />
     <link
       rel="stylesheet"
       href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap"
@@ -17,5 +30,30 @@
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+    <script>
+      // Safari에서 페이지 새로고침 문제 해결
+      if ("serviceWorker" in navigator) {
+        window.addEventListener("load", function () {
+          navigator.serviceWorker.register("/service-worker.js").then(
+            function (registration) {
+              console.log("ServiceWorker 등록 성공:", registration.scope);
+            },
+            function (error) {
+              console.log("ServiceWorker 등록 실패:", error);
+            }
+          );
+        });
+      }
+
+      // iOS Safari에서 홈 화면에 추가된 앱에서 페이지 새로고침 감지
+      if (window.navigator.standalone) {
+        document.addEventListener("visibilitychange", function () {
+          if (document.visibilityState === "visible") {
+            // 앱이 다시 보이게 될 때 페이지 새로고침 방지
+            event.preventDefault();
+          }
+        });
+      }
+    </script>
   </body>
 </html>

@@ -1,0 +1,26 @@
+{
+  "name": "Oh My Sh!t",
+  "short_name": "OMS",
+  "description": "건강 관리 타이머 앱",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#ffffff",
+  "icons": [
+    {
+      "src": "/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
+  "prefer_related_applications": false,
+  "orientation": "portrait",
+  "scope": "/",
+  "screenshots": [],
+  "splash_pages": null
+}
