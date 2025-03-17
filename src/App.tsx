@@ -28,6 +28,7 @@ import {
 } from "@mui/icons-material";
 import { supabase } from "./lib/supabase";
 import { Layout } from "./components/layout/Layout";
+import TimerStatus from "./components/TimerStatus";
 
 // 네비게이션 아이템 값 상수
 const NAV_HOME = "home";
@@ -188,6 +189,7 @@ const AuthenticatedApp = () => {
         />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+      <TimerStatus />
     </Layout>
   );
 };

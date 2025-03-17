@@ -38,6 +38,9 @@ import {
 import ResultModal from "./modal/ResultModal";
 import ContentModal from "./modal/ContentModal";
 
+// store 임포트
+import { useTimerStore } from "../store/timerStore";
+
 // 숫자가 바뀔 때 페이드 애니메이션
 const fadeInOut = keyframes`
   0% { opacity: 0.7; transform: scale(1.02); }
@@ -69,17 +72,26 @@ const Timer: React.FC<TimerProps> = ({
   noBackground = false,
   onTimerStateChange,
 }) => {
-  const [time, setTime] = useState<number>(initialTime);
-  const [isActive, setIsActive] = useState<boolean>(false);
-  const [hasAddedTime, setHasAddedTime] = useState<boolean>(false);
+  const {
+    isActive,
+    time,
+    timerStartTime,
+    timerEndTime,
+    hasAddedTime,
+    setActive,
+    setTime,
+    setTimerStartTime,
+    setTimerEndTime,
+    setHasAddedTime,
+    resetTimer: resetTimerStore,
+  } = useTimerStore();
+
   const [secondChanged, setSecondChanged] = useState<boolean>(false);
   const [openResultModal, setOpenResultModal] = useState<boolean>(false);
   const [openContentModal, setOpenContentModal] = useState<boolean>(false);
   const [showSuccessDetails, setShowSuccessDetails] = useState<boolean>(false);
   const [stoolAmount, setStoolAmount] = useState<StoolAmount>("");
   const [memo, setMemo] = useState<string>("");
-  const [timerStartTime, setTimerStartTime] = useState<Date | null>(null);
-  const [timerEndTime, setTimerEndTime] = useState<Date | null>(null);
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
@@ -91,14 +103,14 @@ const Timer: React.FC<TimerProps> = ({
     if (isActive && time > 0) {
       interval = setInterval(() => {
         setTime((prevTime) => {
-          setSecondChanged(true); // 초가 변경될 때 애니메이션 트리거
-          setTimeout(() => setSecondChanged(false), 500); // 애니메이션 리셋
+          setSecondChanged(true);
+          setTimeout(() => setSecondChanged(false), 500);
           return prevTime - 1;
         });
       }, 1000);
     } else if (time === 0) {
-      setIsActive(false);
-      if (onTimerStateChange) onTimerStateChange(false); // 타이머 종료 시 상태 변경 알림
+      setActive(false);
+      if (onTimerStateChange) onTimerStateChange(false);
       setOpenResultModal(true);
       if (interval) clearInterval(interval);
     }
@@ -106,11 +118,11 @@ const Timer: React.FC<TimerProps> = ({
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [isActive, time, onTimerStateChange]);
+  }, [isActive, time, onTimerStateChange, setActive, setTime]);
 
   // 타이머 시작
   const startTimer = () => {
-    setIsActive(true);
+    setActive(true);
     setTimerStartTime(new Date());
     onTimerStateChange && onTimerStateChange(true);
   };
@@ -124,23 +136,26 @@ const Timer: React.FC<TimerProps> = ({
     }
   };
 
-  // 타이머 중지
+  // 타이머 일시정지
   const pauseTimer = () => {
-    setIsActive(false);
+    setActive(false);
+    setTimerEndTime(new Date());
     onTimerStateChange && onTimerStateChange(false);
   };
 
   // 타이머 리셋
   const resetTimer = () => {
-    setIsActive(false);
+    setActive(false);
     setTime(initialTime);
-    setHasAddedTime(false); // 추가 시간 사용 여부 초기화
+    setTimerStartTime(null);
+    setTimerEndTime(null);
+    setHasAddedTime(false);
     onTimerStateChange && onTimerStateChange(false);
   };
 
   // 결과 모달 열기
   const handleOpenResultModal = () => {
-    setIsActive(false); // 타이머 비활성화
+    setActive(false); // 타이머 비활성화
     setTimerEndTime(new Date()); // 종료 시간 기록
     onTimerStateChange && onTimerStateChange(false); // Alert 숨기기
     setOpenResultModal(true);
@@ -160,10 +175,7 @@ const Timer: React.FC<TimerProps> = ({
       return;
     }
 
-    // 종료 시간이 없는 경우, 현재 시간으로 설정
     const endTime = timerEndTime || new Date();
-
-    // 시간 차이 계산 (분 단위)
     const durationInMinutes = Math.round(
       (endTime.getTime() - timerStartTime.getTime()) / (1000 * 60)
     );
@@ -171,21 +183,18 @@ const Timer: React.FC<TimerProps> = ({
     setIsSaving(true);
 
     try {
-      // 현재 인증된 사용자 정보 가져오기
       const currentUser = await getCurrentUser();
-
       if (!currentUser) {
         throw new Error("사용자 인증 정보를 찾을 수 없습니다.");
       }
 
-      // 배변 기록 저장
       const recordData = {
-        user_id: currentUser.id, // 현재 사용자 ID 설정
+        user_id: currentUser.id,
         start_time: timerStartTime.toISOString(),
         end_time: endTime.toISOString(),
         duration: durationInMinutes,
         success: true,
-        amount: stoolAmount || null, // 빈 문자열인 경우 null로 변환
+        amount: stoolAmount || null,
         memo: memo || null,
       };
 
