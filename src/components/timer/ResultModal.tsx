@@ -14,6 +14,10 @@ import {
   CircularProgress,
   Box,
   Typography,
+  Fade,
+  Stepper,
+  Step,
+  StepLabel,
 } from "@mui/material";
 import { StoolAmount } from "./TimerResultHandler";
 
@@ -37,11 +41,20 @@ const ResultModal: React.FC<ResultModalProps> = ({
   onSave,
   isSaving,
 }) => {
+  const [activeStep, setActiveStep] = useState(0);
   const [selectedResult, setSelectedResult] = useState<"success" | "fail">(
     "success"
   );
   const [stoolAmount, setStoolAmount] = useState<StoolAmount>("");
   const [memo, setMemo] = useState("");
+
+  // 모달이 닫힐 때 초기화
+  React.useEffect(() => {
+    if (!open) {
+      setActiveStep(0);
+      resetForm();
+    }
+  }, [open]);
 
   const handleChangeResult = (event: React.ChangeEvent<HTMLInputElement>) => {
     setSelectedResult(event.target.value as "success" | "fail");
@@ -55,6 +68,18 @@ const ResultModal: React.FC<ResultModalProps> = ({
     setMemo(event.target.value);
   };
 
+  const handleNextStep = () => {
+    if (selectedResult === "success") {
+      setActiveStep(1); // 성공일 경우 다음 단계로
+    } else {
+      handleSave(); // 실패일 경우 바로 저장
+    }
+  };
+
+  const handleBackStep = () => {
+    setActiveStep(0);
+  };
+
   const handleSave = async () => {
     try {
       await onSave(selectedResult === "success", stoolAmount, memo);
@@ -65,6 +90,7 @@ const ResultModal: React.FC<ResultModalProps> = ({
   };
 
   const resetForm = () => {
+    setActiveStep(0);
     setSelectedResult("success");
     setStoolAmount("");
     setMemo("");
@@ -77,26 +103,46 @@ const ResultModal: React.FC<ResultModalProps> = ({
           배변 결과 입력
         </Typography>
       </DialogTitle>
-      <DialogContent>
-        <Box sx={{ pt: 1 }}>
-          <FormControl component="fieldset" sx={{ mb: 2 }}>
-            <FormLabel component="legend">결과</FormLabel>
-            <RadioGroup
-              row
-              value={selectedResult}
-              onChange={handleChangeResult}
-            >
-              <FormControlLabel
-                value="success"
-                control={<Radio />}
-                label="성공"
-              />
-              <FormControlLabel value="fail" control={<Radio />} label="실패" />
-            </RadioGroup>
-          </FormControl>
 
-          {selectedResult === "success" && (
-            <>
+      <DialogContent>
+        <Box sx={{ width: "100%", mt: 2, mb: 3 }}>
+          <Stepper activeStep={activeStep} alternativeLabel>
+            <Step>
+              <StepLabel>결과 선택</StepLabel>
+            </Step>
+            <Step>
+              <StepLabel>세부 정보</StepLabel>
+            </Step>
+          </Stepper>
+        </Box>
+
+        {activeStep === 0 && (
+          <Box sx={{ pt: 1 }}>
+            <FormControl component="fieldset" sx={{ mb: 2 }}>
+              <FormLabel component="legend">결과</FormLabel>
+              <RadioGroup
+                row
+                value={selectedResult}
+                onChange={handleChangeResult}
+              >
+                <FormControlLabel
+                  value="success"
+                  control={<Radio />}
+                  label="성공"
+                />
+                <FormControlLabel
+                  value="fail"
+                  control={<Radio />}
+                  label="실패"
+                />
+              </RadioGroup>
+            </FormControl>
+          </Box>
+        )}
+
+        {activeStep === 1 && (
+          <Fade in={activeStep === 1}>
+            <Box sx={{ pt: 1 }}>
               <FormControl
                 component="fieldset"
                 sx={{ mb: 2, display: "block" }}
@@ -143,25 +189,48 @@ const ResultModal: React.FC<ResultModalProps> = ({
                   margin="normal"
                 />
               </FormControl>
-            </>
-          )}
-        </Box>
+            </Box>
+          </Fade>
+        )}
       </DialogContent>
+
       <DialogActions>
-        <Button onClick={onClose} color="inherit" disabled={isSaving}>
-          취소
-        </Button>
-        <Button
-          onClick={handleSave}
-          color="primary"
-          variant="contained"
-          disabled={(selectedResult === "success" && !stoolAmount) || isSaving}
-          startIcon={
-            isSaving ? <CircularProgress size={20} color="inherit" /> : null
-          }
-        >
-          {isSaving ? "저장 중..." : "저장"}
-        </Button>
+        {activeStep === 0 ? (
+          <>
+            <Button onClick={onClose} color="inherit" disabled={isSaving}>
+              취소
+            </Button>
+            <Button
+              onClick={handleNextStep}
+              color="primary"
+              variant="contained"
+              disabled={isSaving}
+            >
+              {selectedResult === "success" ? "다음" : "저장"}
+            </Button>
+          </>
+        ) : (
+          <>
+            <Button
+              onClick={handleBackStep}
+              color="inherit"
+              disabled={isSaving}
+            >
+              이전
+            </Button>
+            <Button
+              onClick={handleSave}
+              color="primary"
+              variant="contained"
+              disabled={!stoolAmount || isSaving}
+              startIcon={
+                isSaving ? <CircularProgress size={20} color="inherit" /> : null
+              }
+            >
+              {isSaving ? "저장 중..." : "저장"}
+            </Button>
+          </>
+        )}
       </DialogActions>
     </Dialog>
   );

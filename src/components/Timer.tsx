@@ -189,7 +189,7 @@ const Timer: React.FC<TimerProps> = ({
         hasAddedTime={hasAddedTime}
         onStart={startTimer}
         onAddTime={addTimeStore}
-        onOpenInfo={handleOpenContentModal}
+        onOpenContent={handleOpenContentModal}
         onOpenResult={handleOpenResultModal}
       />
     </>
