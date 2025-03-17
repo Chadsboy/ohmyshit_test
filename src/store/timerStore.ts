@@ -15,11 +15,13 @@ interface TimerState {
   resetTimer: () => void;
 }
 
+const INITIAL_TIME = 8 * 60; // 8분
+
 export const useTimerStore = create<TimerState>()(
   persist(
     (set) => ({
       isActive: false,
-      time: 8 * 60, // 8분
+      time: INITIAL_TIME,
       timerStartTime: null,
       timerEndTime: null,
       hasAddedTime: false,
@@ -31,7 +33,7 @@ export const useTimerStore = create<TimerState>()(
       resetTimer: () =>
         set({
           isActive: false,
-          time: 8 * 60,
+          time: INITIAL_TIME,
           timerStartTime: null,
           timerEndTime: null,
           hasAddedTime: false,
@@ -39,7 +41,13 @@ export const useTimerStore = create<TimerState>()(
     }),
     {
       name: "timer-storage",
-      partialize: (state) => ({ time: state.time }), // time만 저장하고 나머지는 초기화
+      partialize: (state) => ({
+        time: state.time,
+        isActive: state.isActive,
+        timerStartTime: state.timerStartTime,
+        timerEndTime: state.timerEndTime,
+        hasAddedTime: state.hasAddedTime,
+      }),
     }
   )
 );

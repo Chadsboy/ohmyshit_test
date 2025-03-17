@@ -102,15 +102,18 @@ const Timer: React.FC<TimerProps> = ({
 
     if (isActive && time > 0) {
       interval = setInterval(() => {
-        setTime(time - 1);
-        setSecondChanged(true);
-        setTimeout(() => setSecondChanged(false), 500);
+        const newTime = time - 1;
+        if (newTime <= 0) {
+          setActive(false);
+          if (onTimerStateChange) onTimerStateChange(false);
+          setOpenResultModal(true);
+          setTime(0);
+        } else {
+          setSecondChanged(true);
+          setTimeout(() => setSecondChanged(false), 500);
+          setTime(newTime);
+        }
       }, 1000);
-    } else if (time === 0) {
-      setActive(false);
-      if (onTimerStateChange) onTimerStateChange(false);
-      setOpenResultModal(true);
-      if (interval) clearInterval(interval);
     }
 
     return () => {
