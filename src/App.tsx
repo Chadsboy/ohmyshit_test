@@ -1,9 +1,28 @@
-import { BrowserRouter as Router } from "react-router-dom";
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Navigate,
+} from "react-router-dom";
 import { useState, useEffect } from "react";
 import { Box, CircularProgress, Typography } from "@mui/material";
 import { supabase } from "./lib/supabase";
 import { CssBaseline } from "@mui/material";
-import { AuthenticatedRoutes, UnauthenticatedRoutes } from "./routes/index";
+
+// 페이지 임포트
+import Home from "./pages/Home";
+import Login from "./pages/Login";
+import Signup from "./pages/Signup";
+import Explore from "./pages/Explore";
+import Foods from "./pages/Foods";
+import Calendar from "./pages/Calendar";
+import Shop from "./pages/Shop";
+import Manual from "./pages/Manual";
+import Help from "./pages/Help";
+import Contact from "./pages/Contact";
+import Profile from "./pages/Profile";
+import Statistics from "./pages/Statistics";
+import Settings from "./pages/Settings";
 
 function App() {
   const [session, setSession] = useState<any>(null);
@@ -167,7 +186,43 @@ function App() {
   return (
     <Router>
       <CssBaseline />
-      {isAuthenticated ? <AuthenticatedRoutes /> : <UnauthenticatedRoutes />}
+      {isAuthenticated ? (
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/explore" element={<Explore />} />
+          <Route path="/foods" element={<Foods />} />
+          <Route path="/calendar" element={<Calendar />} />
+          <Route path="/shop" element={<Shop />} />
+          <Route path="/manual" element={<Manual />} />
+          <Route path="/help" element={<Help />} />
+          <Route path="/contact" element={<Contact />} />
+          <Route path="/profile" element={<Profile />} />
+          <Route path="/statistics" element={<Statistics />} />
+          <Route path="/settings" element={<Settings />} />
+          <Route
+            path="/chat"
+            element={
+              <Box sx={{ p: 3, textAlign: "center" }}>
+                <Typography variant="h5">채팅 페이지</Typography>
+                <Typography
+                  variant="body1"
+                  color="text.secondary"
+                  sx={{ mt: 2 }}
+                >
+                  이 기능은 개발 중입니다.
+                </Typography>
+              </Box>
+            }
+          />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      ) : (
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route path="/signup" element={<Signup />} />
+          <Route path="*" element={<Navigate to="/login" replace />} />
+        </Routes>
+      )}
     </Router>
   );
 }
