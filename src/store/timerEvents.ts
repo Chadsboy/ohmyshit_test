@@ -1,5 +1,14 @@
-// 타이머 완료 이벤트
-export const TIMER_COMPLETED_EVENT = "timer-completed";
+// 타이머 이벤트 상수
+const TIMER_COMPLETED_EVENT = "timer-completed";
+const TIMER_SAVE_STATE_EVENT = "timer-save-state";
+const TIMER_RESTORE_STATE_EVENT = "timer-restore-state";
+
+// 상수들 export
+export {
+  TIMER_COMPLETED_EVENT,
+  TIMER_SAVE_STATE_EVENT,
+  TIMER_RESTORE_STATE_EVENT,
+};
 
 /**
  * 타이머 완료 이벤트 발생

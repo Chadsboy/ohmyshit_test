@@ -20,4 +20,13 @@ export default defineConfig({
   optimizeDeps: {
     include: ["@mui/x-date-pickers", "dayjs"],
   },
+  server: {
+    port: 5173,
+    strictPort: true,
+    hmr: {
+      protocol: "ws",
+      host: "localhost",
+      port: 5173,
+    },
+  },
 });

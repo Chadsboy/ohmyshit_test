@@ -67,60 +67,118 @@ export class EventService {
 
       if (error) throw error;
 
-      if (!data || data.length === 0) {
-        console.log(`[EventService] ${date} 날짜에 이벤트가 없습니다.`);
-
-        // 추가 시도: UTC 시간 기준으로 해당 날짜에 시작하는 이벤트 조회
-        const startOfDay = dayjs
-          .tz(`${date}T00:00:00`, KOREA_TIMEZONE)
-          .utc()
-          .toISOString();
-        const endOfDay = dayjs
-          .tz(`${date}T23:59:59`, KOREA_TIMEZONE)
-          .utc()
-          .toISOString();
-
+      // 데이터가 이미 있다면 바로 반환
+      if (data && data.length > 0) {
         console.log(
-          `[EventService] 시간 범위 조회 시도: ${startOfDay} ~ ${endOfDay}`
+          `[EventService] ${date} 날짜에 ${data.length}개 이벤트 조회됨 (record_date 기준)`
         );
 
-        // 시간 범위로 이벤트 조회
-        const { data: timeRangeData, error: timeRangeError } = await supabase
-          .from("bowel_records")
-          .select("*")
-          .gte("start_time", startOfDay)
-          .lte("start_time", endOfDay)
-          .order("start_time", { ascending: true });
-
-        if (timeRangeError) throw timeRangeError;
-
-        console.log(
-          `[EventService] 시간 범위 조회 결과: ${timeRangeData?.length}개 이벤트`
-        );
+        // 조회된 데이터의 record_date 확인 (디버깅)
+        data.forEach((record) => {
+          console.log(
+            `[EventService] 조회된 기록 ID: ${record.id}, record_date: ${record.record_date}, start_time: ${record.start_time}`
+          );
+        });
 
         // BowelRecord 배열을 CalendarEvent 배열로 변환
-        if (timeRangeData && timeRangeData.length > 0) {
-          const calendarEvents = bowelRecordsToCalendarEvents(
-            timeRangeData as BowelRecord[]
-          );
-          return { data: calendarEvents, error: null };
-        }
+        const calendarEvents = bowelRecordsToCalendarEvents(
+          data as BowelRecord[]
+        );
 
-        return { data: [], error: null };
+        // 변환된 이벤트의 날짜 확인 (디버깅)
+        calendarEvents.forEach((event) => {
+          console.log(
+            `[EventService] 변환된 이벤트 ID: ${event.id}, 날짜: ${event.date}, 제목: ${event.title}`
+          );
+        });
+
+        return { data: calendarEvents, error: null };
       }
 
       console.log(
-        `[EventService] ${date} 날짜에 ${data.length}개 이벤트 조회됨`
+        `[EventService] ${date} 날짜에 record_date 기준 이벤트가 없습니다.`
       );
 
-      // BowelRecord 배열을 CalendarEvent 배열로 변환 (여기서 날짜가 한국 시간대로 변환됨)
+      // 추가 시도: 한국 시간 기준 해당 날짜의 시작과 끝을 UTC로 변환
+      const startOfDay = dayjs
+        .tz(`${date}T00:00:00`, KOREA_TIMEZONE)
+        .utc()
+        .toISOString();
+      const endOfDay = dayjs
+        .tz(`${date}T23:59:59`, KOREA_TIMEZONE)
+        .utc()
+        .toISOString();
+
+      console.log(
+        `[EventService] 시간 범위 조회 시도: ${startOfDay} ~ ${endOfDay}`
+      );
+
+      // 시간 범위로 이벤트 조회
+      const { data: timeRangeData, error: timeRangeError } = await supabase
+        .from("bowel_records")
+        .select("*")
+        .gte("start_time", startOfDay)
+        .lte("start_time", endOfDay)
+        .order("start_time", { ascending: true });
+
+      if (timeRangeError) throw timeRangeError;
+
+      console.log(
+        `[EventService] 시간 범위 조회 결과: ${timeRangeData?.length}개 이벤트`
+      );
+
+      if (!timeRangeData || timeRangeData.length === 0) {
+        return { data: [], error: null };
+      }
+
+      // 시간 범위로 찾은 기록들 확인
+      timeRangeData.forEach((record) => {
+        console.log(
+          `[EventService] 시간 범위로 찾은 기록 ID: ${record.id}, record_date: ${record.record_date}, start_time: ${record.start_time}`
+        );
+        console.log(
+          `[EventService] 한국 시간으로 변환: ${toKoreanTime(
+            record.start_time
+          )}`
+        );
+      });
+
+      // 새로 찾은 이벤트들의 record_date 필드를 현재 날짜로 업데이트
+      const updatePromises = timeRangeData.map(async (record) => {
+        // 이미 해당 날짜의 record_date가 있는지 확인
+        if (record.record_date !== date) {
+          console.log(
+            `[EventService] 기록 ID: ${record.id}의 record_date(${record.record_date})가 요청 날짜(${date})와 다릅니다. 업데이트 시도...`
+          );
+
+          const { error: updateError } = await supabase
+            .from("bowel_records")
+            .update({ record_date: date })
+            .eq("id", record.id);
+
+          if (updateError) {
+            console.error(`ID ${record.id} 레코드 업데이트 실패:`, updateError);
+          } else {
+            console.log(
+              `ID ${record.id} 레코드의 record_date를 ${date}로 업데이트함`
+            );
+            // 메모리상 객체도 업데이트
+            record.record_date = date;
+          }
+        }
+      });
+
+      // 모든 업데이트 완료 대기
+      await Promise.all(updatePromises);
+
+      // BowelRecord 배열을 CalendarEvent 배열로 변환
       const calendarEvents = bowelRecordsToCalendarEvents(
-        data as BowelRecord[]
+        timeRangeData as BowelRecord[]
       );
 
       // 변환된 결과 로깅
       console.log(
-        `[EventService] 변환된 이벤트 날짜:`,
+        `[EventService] 최종 반환된 이벤트 날짜:`,
         calendarEvents.map((e) => e.date)
       );
 
@@ -152,7 +210,7 @@ export class EventService {
       // user_id 설정
       bowelData.user_id = currentUser.id;
 
-      // 날짜 필드 추가 (record_date)
+      // 날짜 필드 추가 (record_date) - 사용자가 선택한 날짜를 항상 우선 사용
       const recordDate = event.date;
 
       console.log("[EventService] 저장 전 데이터:", {
@@ -174,7 +232,9 @@ export class EventService {
         "[EventService] 저장되는 시작 시간 (한국 시간):",
         toKoreanTime(bowelData.start_time)
       );
+      console.log("[EventService] 저장되는 record_date 날짜:", recordDate);
 
+      // 이벤트 데이터 저장, record_date는 사용자가 선택한 날짜로 명시적 설정
       const { data, error } = await supabase
         .from("bowel_records")
         .insert([{ ...bowelData, record_date: recordDate }])
@@ -184,6 +244,30 @@ export class EventService {
       if (error) throw error;
 
       console.log("[EventService] 저장 후 데이터:", data);
+
+      // 저장 후 record_date가 올바른지 확인하고 필요시 수정
+      if (data.record_date !== recordDate) {
+        console.log(
+          `[EventService] record_date 불일치 감지: ${data.record_date} != ${recordDate}, 수정 시도`
+        );
+
+        // record_date 필드를 올바르게 업데이트
+        const { error: updateError } = await supabase
+          .from("bowel_records")
+          .update({ record_date: recordDate })
+          .eq("id", data.id);
+
+        if (updateError) {
+          console.error(
+            "[EventService] record_date 업데이트 실패:",
+            updateError
+          );
+        } else {
+          console.log(`[EventService] record_date를 ${recordDate}로 수정 완료`);
+          // 메모리 상의 객체도 업데이트
+          data.record_date = recordDate;
+        }
+      }
 
       // 생성된 BowelRecord를 CalendarEvent로 변환
       const calendarEvent = bowelRecordToCalendarEvent(data as BowelRecord);
@@ -205,17 +289,25 @@ export class EventService {
     event: Partial<CalendarEvent>
   ): Promise<ServiceResponse<CalendarEvent>> {
     try {
-      // 간단한 메모 업데이트만 지원 (실제로는 더 복잡한 변환 로직이 필요)
+      // 업데이트 데이터 준비
       const updateData: any = {};
 
+      // 메모 업데이트
       if (event.description) {
         updateData.memo = event.description;
       }
 
+      // 날짜 변경 시 record_date 필드 업데이트
       if (event.date) {
         updateData.record_date = event.date;
+
+        // 날짜가 변경될 때 콘솔에 기록
+        console.log(
+          `[EventService] ID ${id} 이벤트 날짜를 ${event.date}로 업데이트`
+        );
       }
 
+      // 이벤트 업데이트 진행
       const { data, error } = await supabase
         .from("bowel_records")
         .update(updateData)
@@ -224,6 +316,8 @@ export class EventService {
         .single();
 
       if (error) throw error;
+
+      console.log("[EventService] 이벤트 업데이트 완료:", data);
 
       // 업데이트된 BowelRecord를 CalendarEvent로 변환
       const calendarEvent = bowelRecordToCalendarEvent(data as BowelRecord);

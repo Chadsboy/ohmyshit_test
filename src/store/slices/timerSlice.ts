@@ -1,48 +1,34 @@
 import { StateCreator } from "zustand";
-import {
-  TIMER_COMPLETED_EVENT,
-  dispatchTimerCompletedEvent,
-} from "../timerEvents";
+import { TIMER_COMPLETED_EVENT } from "../timerEvents";
 
-// 초기 타이머 시간 (8분)
-export const INITIAL_TIME = 8 * 60;
+// 기본 타이머 시간 (8분 = 480초)
+const INITIAL_TIME = 480;
 
-/**
- * 타이머 슬라이스 인터페이스
- */
 export interface TimerSlice {
+  // 상태
   isActive: boolean;
   time: number;
-  timerStartTime: Date | null;
-  timerEndTime: Date | null;
+  timerStartTime: number | null;
+  timerEndTime: number | null;
   hasAddedTime: boolean;
   interval: NodeJS.Timeout | null;
-  lastActive: boolean; // 페이지 가시성 변경 전 활성 상태
-  lastUpdateTime: number; // 마지막 업데이트 시간 (타임스탬프)
-  isCompleted: boolean; // 타이머 완료 상태
-  shouldShowModal: boolean; // 결과 모달 표시 여부
+  lastActive: number | null;
+  lastUpdateTime: number | null;
+  isCompleted: boolean;
+  shouldShowModal: boolean;
 
-  // 상태 설정 함수
-  setActive: (isActive: boolean) => void;
+  // 액션
+  setIsActive: (isActive: boolean) => void;
   setTime: (time: number) => void;
-  setTimerStartTime: (time: Date | null) => void;
-  setTimerEndTime: (time: Date | null) => void;
-  setHasAddedTime: (hasAdded: boolean) => void;
-  setLastActive: (lastActive: boolean) => void;
-  setLastUpdateTime: (time: number) => void;
-  setIsCompleted: (isCompleted: boolean) => void;
+  setHasAddedTime: (hasAddedTime: boolean) => void;
+  setInterval: (interval: NodeJS.Timeout | null) => void;
   setShouldShowModal: (shouldShowModal: boolean) => void;
-
-  // 액션 함수
   resetTimer: () => void;
   startTimer: () => void;
   pauseTimer: () => void;
-  addTime: () => void;
+  addTime: (seconds: number) => void;
 }
 
-/**
- * 타이머 슬라이스 생성 함수
- */
 export const createTimerSlice: StateCreator<TimerSlice> = (set, get) => ({
   // 초기 상태
   isActive: false,
@@ -51,27 +37,26 @@ export const createTimerSlice: StateCreator<TimerSlice> = (set, get) => ({
   timerEndTime: null,
   hasAddedTime: false,
   interval: null,
-  lastActive: false,
-  lastUpdateTime: Date.now(),
+  lastActive: null,
+  lastUpdateTime: null,
   isCompleted: false,
   shouldShowModal: false,
 
-  // 상태 설정 함수
-  setActive: (isActive) => set({ isActive }),
+  // 세터 함수들
+  setIsActive: (isActive) => set({ isActive }),
   setTime: (time) => set({ time }),
-  setTimerStartTime: (time) => set({ timerStartTime: time }),
-  setTimerEndTime: (time) => set({ timerEndTime: time }),
-  setHasAddedTime: (hasAdded) => set({ hasAddedTime: hasAdded }),
-  setLastActive: (lastActive) => set({ lastActive }),
-  setLastUpdateTime: (time) => set({ lastUpdateTime: time }),
-  setIsCompleted: (isCompleted) => set({ isCompleted }),
+  setHasAddedTime: (hasAddedTime) => set({ hasAddedTime }),
+  setInterval: (interval) => set({ interval }),
   setShouldShowModal: (shouldShowModal) => set({ shouldShowModal }),
 
   // 타이머 리셋
   resetTimer: () => {
+    const { interval } = get();
+
     // 기존 인터벌 제거
-    const interval = get().interval;
-    if (interval) clearInterval(interval);
+    if (interval) {
+      clearInterval(interval);
+    }
 
     set({
       isActive: false,
@@ -80,8 +65,8 @@ export const createTimerSlice: StateCreator<TimerSlice> = (set, get) => ({
       timerEndTime: null,
       hasAddedTime: false,
       interval: null,
-      lastActive: false,
-      lastUpdateTime: Date.now(),
+      lastActive: null,
+      lastUpdateTime: null,
       isCompleted: false,
       shouldShowModal: false,
     });
@@ -89,100 +74,99 @@ export const createTimerSlice: StateCreator<TimerSlice> = (set, get) => ({
 
   // 타이머 시작
   startTimer: () => {
-    const { interval, isActive, isCompleted } = get();
+    const { interval, time, isActive } = get();
 
-    // 타이머가 완료된 상태면 리셋 후 시작
-    if (isCompleted) {
-      get().resetTimer();
-      // 약간의 지연 후 타이머 시작 (상태 업데이트가 적용될 시간 확보)
-      setTimeout(() => {
-        get().startTimer();
-      }, 100);
-      return;
-    }
-
-    // 이미 타이머가 작동 중이면 무시
+    // 이미 활성화되어 있으면 아무것도 하지 않음
     if (isActive) return;
 
     // 기존 인터벌 제거
-    if (interval) clearInterval(interval);
+    if (interval) {
+      clearInterval(interval);
+    }
 
-    // 타이머 시작 시간 설정
-    const timerStartTime = get().timerStartTime || new Date();
+    // 현재 시간 기록
+    const now = Date.now();
+    const endTime = now + time * 1000;
 
-    // 새 인터벌 시작
+    // 타이머 인터벌 설정
     const newInterval = setInterval(() => {
-      const currentTime = get().time;
-      const newTime = currentTime - 1;
+      const { time, isActive } = get();
 
-      if (newTime <= 0) {
-        // 타이머 종료
+      // 타이머가 활성화 상태가 아니면 인터벌 제거
+      if (!isActive) {
         const { interval } = get();
-        if (interval) clearInterval(interval);
+        if (interval) {
+          clearInterval(interval);
+          set({ interval: null });
+        }
+        return;
+      }
+
+      // 타이머 시간 감소
+      if (time <= 1) {
+        // 타이머 완료
+        const { interval } = get();
+        if (interval) {
+          clearInterval(interval);
+        }
+
+        // 타이머 완료 이벤트 발생
+        window.dispatchEvent(new CustomEvent(TIMER_COMPLETED_EVENT));
 
         set({
-          isActive: false,
           time: 0,
-          timerEndTime: new Date(),
+          isActive: false,
           interval: null,
-          lastActive: false,
-          lastUpdateTime: Date.now(),
           isCompleted: true,
           shouldShowModal: true,
         });
-
-        // 타이머 완료 이벤트 발생
-        if (typeof window !== "undefined") {
-          dispatchTimerCompletedEvent();
-        }
       } else {
-        // 타이머 진행
-        set({
-          time: newTime,
-          lastUpdateTime: Date.now(),
-        });
+        set({ time: time - 1 });
       }
     }, 1000);
 
     // 상태 업데이트
     set({
       isActive: true,
-      timerStartTime,
+      timerStartTime: now,
+      timerEndTime: endTime,
       interval: newInterval,
-      lastActive: true,
-      lastUpdateTime: Date.now(),
-      isCompleted: false,
-      shouldShowModal: false,
+      lastActive: now,
+      lastUpdateTime: now,
     });
   },
 
   // 타이머 일시정지
   pauseTimer: () => {
-    const { interval } = get();
+    const { interval, isActive } = get();
+
+    // 활성화되어 있지 않으면 아무것도 하지 않음
+    if (!isActive) return;
 
     // 인터벌 제거
-    if (interval) clearInterval(interval);
+    if (interval) {
+      clearInterval(interval);
+    }
 
     // 상태 업데이트
     set({
       isActive: false,
-      timerEndTime: new Date(),
       interval: null,
-      lastActive: false,
-      lastUpdateTime: Date.now(),
+      lastActive: Date.now(),
     });
   },
 
-  // 시간 추가 (1분)
-  addTime: () => {
-    const { hasAddedTime, time } = get();
+  // 타이머에 시간 추가 (초 단위)
+  addTime: (seconds) => {
+    const { time, hasAddedTime } = get();
 
-    if (!hasAddedTime) {
-      set({
-        time: time + 60, // 1분(60초) 추가
-        hasAddedTime: true, // 한 번만 추가할 수 있도록 설정
-        lastUpdateTime: Date.now(),
-      });
-    }
+    // 이미 시간을 추가했으면 아무것도 하지 않음
+    if (hasAddedTime) return;
+
+    // 상태 업데이트
+    set({
+      time: time + seconds,
+      hasAddedTime: true,
+    });
   },
 });

@@ -12,6 +12,17 @@ const Alert: React.FC<AlertProps> = ({ isTimerActive = false }) => {
   const [visible, setVisible] = useState(true);
   const [slideIn, setSlideIn] = useState(true);
   const textRef = useRef<HTMLElement>(null);
+  const [shouldRender, setShouldRender] = useState(false);
+
+  // 개발 환경 로그 (디버깅용)
+  useEffect(() => {
+    if (process.env.NODE_ENV === "development") {
+      console.log("Alert 컴포넌트 isTimerActive:", isTimerActive);
+    }
+
+    // boolean 값으로 명시적 변환 후 상태 저장
+    setShouldRender(Boolean(isTimerActive));
+  }, [isTimerActive]);
 
   // 뉴스 헤드라인 목록
   const headlines = [
@@ -27,7 +38,7 @@ const Alert: React.FC<AlertProps> = ({ isTimerActive = false }) => {
 
   // 문구 변경 및 애니메이션 처리
   useEffect(() => {
-    if (!isTimerActive) return;
+    if (!shouldRender) return;
 
     let timeoutId: NodeJS.Timeout;
 
@@ -57,10 +68,10 @@ const Alert: React.FC<AlertProps> = ({ isTimerActive = false }) => {
     return () => {
       clearTimeout(timeoutId);
     };
-  }, [headlines.length, isTimerActive]);
+  }, [headlines.length, shouldRender]);
 
   // 타이머가 비활성화되면 Alert도 숨김
-  if (!isTimerActive) {
+  if (!shouldRender) {
     return null;
   }
 
@@ -77,7 +88,7 @@ const Alert: React.FC<AlertProps> = ({ isTimerActive = false }) => {
         boxShadow: "0 4px 15px rgba(0, 0, 0, 0.15)",
         mx: 0,
         px: 0,
-        display: isTimerActive ? "block" : "none", // 타이머 활성화 시에만 표시
+        display: shouldRender ? "block" : "none", // 타이머 활성화 시에만 표시
       }}
     >
       <Box

@@ -1,0 +1,340 @@
+import { supabase } from "../lib/supabase";
+import { BowelRecord, CalendarEvent, ServiceResponse } from "../types";
+import { getCurrentUser } from "./auth";
+import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc";
+import timezone from "dayjs/plugin/timezone";
+
+// dayjs 플러그인 설정
+dayjs.extend(utc);
+dayjs.extend(timezone);
+
+// 한국 시간대
+const KOREA_TIMEZONE = "Asia/Seoul";
+
+/**
+ * 배변 기록 서비스
+ * 타임존 문제를 해결하면서 배변 기록을 관리하는 전용 서비스
+ */
+export class BowelRecordService {
+  /**
+   * 새로운 배변 기록을 생성합니다
+   * @param date 사용자가 선택한 날짜 (YYYY-MM-DD)
+   * @param time 시간 (24시간제, HH:MM 형식)
+   * @param duration 소요 시간 (분)
+   * @param isSuccess 성공 여부
+   * @param amount 배변량 (성공인 경우)
+   * @param memo 메모
+   */
+  static async createRecord(
+    date: string,
+    time: string = "09:00",
+    duration: number = 5,
+    isSuccess: boolean = true,
+    amount: string | null = null,
+    memo: string | null = null
+  ): Promise<ServiceResponse<BowelRecord>> {
+    try {
+      // 현재 사용자 정보 가져오기
+      const currentUser = await getCurrentUser();
+      if (!currentUser) {
+        throw new Error("사용자 인증 정보를 찾을 수 없습니다.");
+      }
+
+      // 한국 시간 기준으로 날짜와 시간 조합
+      const koreaDateTime = dayjs.tz(`${date}T${time}:00`, KOREA_TIMEZONE);
+
+      // UTC 시간으로 변환 (데이터베이스 저장용)
+      const utcDateTime = koreaDateTime.utc();
+
+      // 종료 시간 계산 (duration 분 후)
+      const endDateTime = utcDateTime.add(duration, "minute");
+
+      // ISO 문자열로 변환
+      const startTimeIso = utcDateTime.toISOString();
+      const endTimeIso = endDateTime.toISOString();
+
+      // 한국 시간 기준으로 record_date 생성
+      const koreanDate = koreaDateTime.format("YYYY-MM-DD");
+
+      // 현재 시간 기반으로 고유한 day_index 생성
+      const uniqueIndex =
+        (Date.now() % 10000) + Math.floor(Math.random() * 1000);
+
+      // 레코드 데이터 생성 - 한국 시간 기준 날짜를 저장
+      const recordData = {
+        user_id: currentUser.id,
+        record_date: koreanDate, // 한국 시간 기준 날짜
+        start_time: startTimeIso,
+        end_time: endTimeIso,
+        duration,
+        success: isSuccess,
+        amount: isSuccess ? amount : null,
+        memo: memo || null,
+        day_index: uniqueIndex, // 고유한 day_index 사용
+      };
+
+      // 데이터베이스에 저장
+      const { data, error } = await supabase
+        .from("bowel_records")
+        .insert([recordData])
+        .select("*")
+        .single();
+
+      if (error) throw error;
+
+      return { data: data as BowelRecord, error: null };
+    } catch (error) {
+      console.error("[BowelRecordService] 배변 기록 생성 중 오류:", error);
+      return { data: null, error: error as Error };
+    }
+  }
+
+  /**
+   * 특정 날짜의 배변 기록을 가져옵니다
+   * @param date 조회할 날짜 (YYYY-MM-DD)
+   */
+  static async getRecordsByDate(
+    date: string
+  ): Promise<ServiceResponse<BowelRecord[]>> {
+    try {
+      // 한국 시간 기준으로 해당 날짜의 시작과 끝 시간을 UTC로 변환
+      const startOfDayUTC = dayjs
+        .tz(`${date}T00:00:00`, KOREA_TIMEZONE)
+        .utc()
+        .toISOString();
+      const endOfDayUTC = dayjs
+        .tz(`${date}T23:59:59`, KOREA_TIMEZONE)
+        .utc()
+        .toISOString();
+
+      // 시간 범위로 이벤트 조회 (한국 시간 기준으로 해당 날짜에 해당하는 UTC 시간 범위)
+      const { data, error } = await supabase
+        .from("bowel_records")
+        .select("*")
+        .gte("start_time", startOfDayUTC)
+        .lte("start_time", endOfDayUTC)
+        .order("start_time", { ascending: true });
+
+      if (error) throw error;
+
+      // 조회 결과 반환
+      return { data: data as BowelRecord[], error: null };
+    } catch (error) {
+      console.error(
+        `[BowelRecordService] ${date} 날짜 기록 조회 중 오류:`,
+        error
+      );
+      return { data: null, error: error as Error };
+    }
+  }
+
+  /**
+   * 배변 기록을 캘린더 이벤트로 변환합니다
+   * @param record 변환할 배변 기록
+   */
+  static recordToCalendarEvent(record: BowelRecord): CalendarEvent {
+    // UTC 시간을 한국 시간으로 변환
+    const startTimeKST = dayjs(record.start_time).tz(KOREA_TIMEZONE);
+
+    // record_date를 그대로 사용 (이미 올바른 한국 날짜)
+    const dateForEvent = record.record_date;
+
+    // 한국 시간 문자열 (HH:MM)
+    const timeStr = startTimeKST.format("HH:mm");
+
+    console.log(`[BowelRecordService] UTC 시간: ${record.start_time}`);
+    console.log(
+      `[BowelRecordService] 변환된 한국 시간: ${startTimeKST.format()}`
+    );
+    console.log(`[BowelRecordService] 이벤트에 사용되는 날짜: ${dateForEvent}`);
+    console.log(`[BowelRecordService] record_date: ${record.record_date}`);
+
+    if (!record.record_date) {
+      console.error(
+        "[심각한 오류] record_date가 없습니다! 기록 ID:",
+        record.id
+      );
+    }
+
+    // 성공/실패 상태와 배변량에 따라 제목 생성
+    let title = record.success
+      ? `배변 성공 (${timeStr})`
+      : `배변 시도 (${timeStr})`;
+
+    if (record.success && record.amount) {
+      title += ` - ${record.amount}`;
+    }
+
+    // 설명 생성
+    let description = `소요 시간: ${record.duration}분`;
+    if (record.memo) {
+      description += `\n메모: ${record.memo}`;
+    }
+
+    // 캘린더 이벤트 객체 생성 - 항상 record_date 필드를 사용
+    return {
+      id: record.id,
+      title,
+      description,
+      date: dateForEvent,
+      created_at: record.created_at,
+      user_id: record.user_id,
+    };
+  }
+
+  /**
+   * 배변 기록 배열을 캘린더 이벤트 배열로 변환합니다
+   * @param records 변환할 배변 기록 배열
+   */
+  static recordsToCalendarEvents(records: BowelRecord[]): CalendarEvent[] {
+    return records.map(this.recordToCalendarEvent);
+  }
+
+  /**
+   * 배변 기록을 삭제합니다
+   * @param id 삭제할 기록 ID
+   */
+  static async deleteRecord(id: string): Promise<ServiceResponse<null>> {
+    try {
+      const { error } = await supabase
+        .from("bowel_records")
+        .delete()
+        .eq("id", id);
+
+      if (error) throw error;
+
+      return { data: null, error: null };
+    } catch (error) {
+      console.error(`[BowelRecordService] ID ${id} 기록 삭제 중 오류:`, error);
+      return { data: null, error: error as Error };
+    }
+  }
+
+  /**
+   * 배변 기록을 업데이트합니다
+   * @param id 업데이트할 기록 ID
+   * @param updates 업데이트할 필드들
+   */
+  static async updateRecord(
+    id: string,
+    updates: {
+      date?: string;
+      memo?: string;
+      amount?: string | null;
+      success?: boolean;
+    }
+  ): Promise<ServiceResponse<BowelRecord>> {
+    try {
+      const updateData: any = {};
+
+      if (updates.date) {
+        updateData.record_date = updates.date;
+        console.log(
+          `[BowelRecordService] 업데이트할 record_date: ${updates.date}`
+        );
+      }
+
+      if (updates.memo !== undefined) {
+        updateData.memo = updates.memo;
+      }
+
+      if (updates.amount !== undefined) {
+        updateData.amount = updates.amount;
+      }
+
+      if (updates.success !== undefined) {
+        updateData.success = updates.success;
+      }
+
+      // 업데이트 데이터가 비어있으면 에러
+      if (Object.keys(updateData).length === 0) {
+        throw new Error("업데이트할 데이터가 없습니다.");
+      }
+
+      console.log(`[BowelRecordService] ID ${id} 업데이트 데이터:`, updateData);
+
+      const { data, error } = await supabase
+        .from("bowel_records")
+        .update(updateData)
+        .eq("id", id)
+        .select("*")
+        .single();
+
+      if (error) throw error;
+
+      console.log(`[BowelRecordService] ID ${id} 업데이트 완료:`, data);
+
+      return { data: data as BowelRecord, error: null };
+    } catch (error) {
+      console.error(`[BowelRecordService] ID ${id} 업데이트 중 오류:`, error);
+      return { data: null, error: error as Error };
+    }
+  }
+
+  /**
+   * 모든 기록의 record_date 필드를 한국 시간 기준으로 업데이트합니다.
+   * 주의: 이 함수는 관리자 기능으로, 필요한 경우에만 사용해야 합니다.
+   */
+  static async updateAllRecordDates(): Promise<
+    ServiceResponse<{ updated: number; failed: number }>
+  > {
+    try {
+      // 모든 기록 가져오기
+      const { data, error } = await supabase
+        .from("bowel_records")
+        .select("id, start_time, record_date");
+
+      if (error) throw error;
+
+      if (!data || data.length === 0) {
+        return { data: { updated: 0, failed: 0 }, error: null };
+      }
+
+      let updatedCount = 0;
+      let failedCount = 0;
+
+      // 각 기록 처리
+      for (const record of data) {
+        try {
+          // UTC 시간을 한국 시간으로 변환하여 날짜 추출
+          const koreanDate = dayjs
+            .utc(record.start_time)
+            .tz(KOREA_TIMEZONE)
+            .format("YYYY-MM-DD");
+
+          // 날짜가 다른 경우에만 업데이트
+          if (record.record_date !== koreanDate) {
+            // 현재 타임스탬프와 임의의 값으로 고유한 인덱스 생성
+            const randomIndex =
+              (Date.now() % 10000) + Math.floor(Math.random() * 1000);
+
+            const { error: updateError } = await supabase
+              .from("bowel_records")
+              .update({
+                record_date: koreanDate,
+                day_index: randomIndex, // 고유한 인덱스 값 설정
+              })
+              .eq("id", record.id);
+
+            if (updateError) {
+              failedCount++;
+            } else {
+              updatedCount++;
+            }
+          }
+        } catch (err) {
+          failedCount++;
+        }
+      }
+
+      return {
+        data: { updated: updatedCount, failed: failedCount },
+        error: null,
+      };
+    } catch (error) {
+      console.error("[BowelRecordService] 기록 날짜 업데이트 중 오류:", error);
+      return { data: null, error: error as Error };
+    }
+  }
+}

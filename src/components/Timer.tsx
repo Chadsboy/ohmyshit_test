@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { Box, useTheme, useMediaQuery, keyframes } from "@mui/material";
+import { Box, useTheme, useMediaQuery } from "@mui/material";
+import { Global, css } from "@emotion/react";
 
 // 모듈화된 컴포넌트 임포트
 import TimerDisplay from "./timer/TimerDisplay";
@@ -11,18 +12,52 @@ import ContentModal from "./modal/ContentModal";
 import { useTimerStore } from "../store/timerStore";
 import { TimerResultHandler, StoolAmount } from "./timer/TimerResultHandler";
 
-// 숫자가 바뀔 때 페이드 애니메이션
-const fadeInOut = keyframes`
-  0% { opacity: 0.7; transform: scale(1.02); }
-  50% { opacity: 1; transform: scale(1.05); }
-  100% { opacity: 1; transform: scale(1); }
+// 숫자가 바뀔 때 페이드 애니메이션 - !중요: 배포 환경에서도 동일하게 적용되도록 수정
+const numberFadeInOut = css`
+  @keyframes fadeInOut {
+    0% {
+      opacity: 0.7;
+      transform: scale(1.02);
+    }
+    50% {
+      opacity: 1;
+      transform: scale(1.05);
+    }
+    100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
 `;
 
-// 타이머 활성화 시 맥동 애니메이션
-const pulsate = keyframes`
-  0% { transform: scale(1); }
-  50% { transform: scale(1.03); }
-  100% { transform: scale(1); }
+// 타이머 디스플레이에서 사용하는 페이드 애니메이션 (TimerDisplay.tsx와 일치시킴)
+const displayFadeInOut = css`
+  @keyframes fadeInOut {
+    0% {
+      opacity: 0.7;
+    }
+    50% {
+      opacity: 1;
+    }
+    100% {
+      opacity: 0.7;
+    }
+  }
+`;
+
+// 타이머 활성화 시 맥동 애니메이션 - !중요: 배포 환경에서도 동일하게 적용되도록 수정
+const pulsate = css`
+  @keyframes pulsate {
+    0% {
+      transform: scale(1);
+    }
+    50% {
+      transform: scale(1.03);
+    }
+    100% {
+      transform: scale(1);
+    }
+  }
 `;
 
 /**
@@ -52,6 +87,13 @@ const Timer: React.FC = () => {
   const [secondChanged, setSecondChanged] = useState(false);
   const [openContentModal, setOpenContentModal] = useState<boolean>(false);
   const [isSaving, setIsSaving] = useState<boolean>(false);
+
+  // 개발 환경 로그 (디버깅용)
+  useEffect(() => {
+    if (process.env.NODE_ENV === "development") {
+      console.log("Timer 컴포넌트 isActive:", isActive);
+    }
+  }, [isActive]);
 
   // 초 변경 효과 처리
   useEffect(() => {
@@ -135,47 +177,52 @@ const Timer: React.FC = () => {
   };
 
   return (
-    <Box
-      sx={{
-        width: "100%",
-        maxWidth: 400,
-        mx: "auto",
-        textAlign: "center",
-        animation: isActive ? `${pulsate} 3s infinite ease-in-out` : "none",
-      }}
-    >
-      {/* 타이머 표시 부분 */}
-      <TimerDisplay
-        time={time}
-        isActive={isActive}
-        secondChanged={secondChanged}
-      />
+    <>
+      {/* 전역 스타일 주입 - 배포 환경에서도 적용되도록 */}
+      <Global styles={[numberFadeInOut, displayFadeInOut, pulsate]} />
 
-      {/* 타이머 컨트롤 버튼들 */}
-      <TimerControls
-        isActive={isActive}
-        hasAddedTime={hasAddedTime}
-        onStart={startTimer}
-        onAddTime={handleAddTime}
-        onOpenContent={handleOpenContentModal}
-        onOpenResult={handleOpenResultModal}
-      />
+      <Box
+        sx={{
+          width: "100%",
+          maxWidth: 400,
+          mx: "auto",
+          textAlign: "center",
+          animation: isActive ? "pulsate 3s infinite ease-in-out" : "none",
+        }}
+      >
+        {/* 타이머 표시 부분 */}
+        <TimerDisplay
+          time={time}
+          isActive={isActive}
+          secondChanged={secondChanged}
+        />
 
-      {/* 결과 입력 모달 - 단계별 모달로 변경 */}
-      <ResultModal
-        open={shouldShowModal}
-        onClose={handleCloseResultModal}
-        onSuccess={handleSuccess}
-        onFail={handleFail}
-        isSaving={isSaving}
-      />
+        {/* 타이머 컨트롤 버튼들 */}
+        <TimerControls
+          isActive={isActive}
+          hasAddedTime={hasAddedTime}
+          onStart={startTimer}
+          onAddTime={handleAddTime}
+          onOpenContent={handleOpenContentModal}
+          onOpenResult={handleOpenResultModal}
+        />
 
-      {/* 콘텐츠 모달 */}
-      <ContentModal
-        open={openContentModal}
-        onClose={() => setOpenContentModal(false)}
-      />
-    </Box>
+        {/* 결과 입력 모달 - 단계별 모달로 변경 */}
+        <ResultModal
+          open={shouldShowModal}
+          onClose={handleCloseResultModal}
+          onSuccess={handleSuccess}
+          onFail={handleFail}
+          isSaving={isSaving}
+        />
+
+        {/* 콘텐츠 모달 */}
+        <ContentModal
+          open={openContentModal}
+          onClose={() => setOpenContentModal(false)}
+        />
+      </Box>
+    </>
   );
 };
 

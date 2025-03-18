@@ -9,6 +9,7 @@ import {
   Box,
   Stack,
   useTheme,
+  Tooltip,
 } from "@mui/material";
 import {
   Edit as EditIcon,
@@ -142,6 +143,14 @@ const EventList: React.FC<EventListProps> = ({
         const memoMatch = event.description.match(/메모: (.+)/);
         const memo = memoMatch ? memoMatch[1] : "";
 
+        // 개별 이벤트 삭제 핸들러
+        const handleDeleteSingleEvent = (e: React.MouseEvent) => {
+          e.stopPropagation(); // 이벤트 버블링 방지
+          if (window.confirm("이 기록을 삭제하시겠습니까?")) {
+            onDelete(event.id);
+          }
+        };
+
         return (
           <React.Fragment key={event.id}>
             <ListItem
@@ -166,21 +175,46 @@ const EventList: React.FC<EventListProps> = ({
                       <DeleteIcon />
                     </IconButton>
                   </Box>
-                ) : duration ? (
-                  <Typography
-                    variant="body2"
-                    color="text.secondary"
-                    sx={{
-                      fontWeight: "medium",
-                      display: "flex",
-                      alignItems: "center",
-                      height: "100%",
-                    }}
-                  >
-                    {duration}분
-                  </Typography>
-                ) : null
+                ) : (
+                  <Box sx={{ display: "flex", alignItems: "center" }}>
+                    {/* 소요 시간 표시 */}
+                    {duration && (
+                      <Typography
+                        variant="body2"
+                        color="text.secondary"
+                        sx={{
+                          fontWeight: "medium",
+                          mr: 1,
+                        }}
+                      >
+                        {duration}분
+                      </Typography>
+                    )}
+
+                    {/* 개별 삭제 버튼 */}
+                    <Tooltip title="이 기록 삭제">
+                      <IconButton
+                        size="small"
+                        aria-label="delete single event"
+                        onClick={handleDeleteSingleEvent}
+                        disabled={disabled}
+                        sx={{
+                          color: theme.palette.text.secondary,
+                        }}
+                      >
+                        <DeleteIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                  </Box>
+                )
               }
+              sx={{
+                pr: 2,
+                transition: "background-color 0.2s",
+                "&:hover": {
+                  backgroundColor: theme.palette.action.hover,
+                },
+              }}
             >
               <Box
                 sx={{ display: "flex", flexDirection: "column", width: "100%" }}
@@ -221,18 +255,7 @@ const EventList: React.FC<EventListProps> = ({
                   {isSuccess && <StoolAmountIndicator amount={amount} />}
                 </Box>
 
-                {/* 내용 영역 - 소요 시간과 메모 */}
-                {/* hideActions가 true일 때는 소요 시간을 오른쪽으로 이동했으므로 여기서는 표시하지 않음 */}
-                {!hideActions && duration && (
-                  <Typography
-                    variant="body2"
-                    color="text.secondary"
-                    sx={{ mb: 0.5 }}
-                  >
-                    소요 시간: {duration}분
-                  </Typography>
-                )}
-
+                {/* 내용 영역 - 메모 */}
                 {/* 성공일 경우에만 메모 표시 */}
                 {isSuccess && memo && (
                   <Typography variant="body2" color="text.secondary">

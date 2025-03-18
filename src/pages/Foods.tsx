@@ -91,7 +91,7 @@ const Foods = () => {
             mb: 2,
           }}
         >
-          도움이 되는 음식들 입니다
+          Oh My Hea!th Foods
         </Typography>
 
         <Grid container spacing={0.5} sx={{ pb: 7 }}>
@@ -122,7 +122,7 @@ const Foods = () => {
           mb: 3,
         }}
       >
-        도움이 되는 음식들 입니다
+        Oh My Hea!th Foods
       </Typography>
 
       <ImageList

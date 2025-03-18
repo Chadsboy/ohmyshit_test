@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Box,
   Typography,
@@ -9,6 +9,7 @@ import {
 import Timer from "../components/Timer";
 import Alert from "../components/Alert";
 import homeImage from "../assets/home.png";
+import { useTimerStore } from "../store/timerStore";
 
 const Home = () => {
   const [isTimerActive, setIsTimerActive] = useState(false);
@@ -16,9 +17,19 @@ const Home = () => {
   const isSmallScreen = useMediaQuery(theme.breakpoints.down("sm"));
   const isMediumScreen = useMediaQuery(theme.breakpoints.between("sm", "md"));
 
-  const handleTimerStateChange = (active: boolean) => {
-    setIsTimerActive(active);
-  };
+  // 타이머 스토어에서 상태 가져오기
+  const { isActive } = useTimerStore();
+
+  // 타이머 상태가 변경될 때마다 로컬 상태 업데이트
+  useEffect(() => {
+    // 명시적으로 Boolean으로 변환하여 일관된 값을 보장
+    setIsTimerActive(Boolean(isActive));
+
+    // 디버깅용 콘솔 로그 (개발 모드에서만 출력)
+    if (process.env.NODE_ENV === "development") {
+      console.log("타이머 활성화 상태:", Boolean(isActive));
+    }
+  }, [isActive]);
 
   // 화면 크기에 따라 Alert 위치 조정
   const getAlertPosition = () => {
@@ -44,15 +55,11 @@ const Home = () => {
             minHeight: "calc(100vh - 120px)", // 알림 영역을 위한 공간 확보
           }}
         >
-          <Typography variant="h4" component="h1" gutterBottom>
-            홈페이지 입니다
-          </Typography>
-
           {/* 이미지 영역 */}
           <Box
             sx={{
               width: "100%",
-              maxWidth: { xs: "250px", sm: "300px" },
+              maxWidth: { xs: "300px", sm: "400px" },
               height: "auto",
               mb: 3,
             }}
@@ -70,11 +77,7 @@ const Home = () => {
           </Box>
 
           {/* 타이머 컴포넌트 */}
-          <Timer
-            initialTime={8 * 60}
-            noBackground
-            onTimerStateChange={handleTimerStateChange}
-          />
+          <Timer />
         </Box>
       </Container>
 
@@ -93,7 +96,8 @@ const Home = () => {
           paddingBottom: { xs: "env(safe-area-inset-bottom, 0px)", sm: 0 },
         }}
       >
-        <Alert isTimerActive={isTimerActive} />
+        {/* isTimerActive 상태가 항상 불리언 값이 되도록 명시적 변환 */}
+        <Alert isTimerActive={Boolean(isTimerActive)} />
       </Box>
     </>
   );

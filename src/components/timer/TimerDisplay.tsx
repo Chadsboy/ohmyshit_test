@@ -1,120 +1,105 @@
 import React from "react";
-import { Box, Typography, useTheme } from "@mui/material";
+import { Box, Typography } from "@mui/material";
 import { Timer as TimerIcon } from "@mui/icons-material";
-import { keyframes } from "@mui/material/styles";
+import { css } from "@emotion/react";
 
-// 숫자가 바뀔 때 페이드 애니메이션
-const fadeInOut = keyframes`
-  0% { opacity: 0.7; transform: scale(1.02); }
-  50% { opacity: 1; transform: scale(1.05); }
-  100% { opacity: 1; transform: scale(1); }
-`;
+// 페이드 인 아웃 애니메이션 정의
+// 주의: 우리는 타이머 컴포넌트에서 이미 전역적으로 정의했기 때문에
+// 여기서는 animation 속성만 참조합니다.
 
 interface TimerDisplayProps {
-  time: number;
-  isActive: boolean;
-  secondChanged: boolean;
+  time: number; // 초 단위 시간
+  isActive: boolean; // 타이머 활성화 상태
+  secondChanged: boolean; // 초가 변경되었는지 여부
 }
 
 /**
- * 타이머 시간을 표시하는 컴포넌트
+ * 타이머 디스플레이 컴포넌트
+ * 시간을 MM:SS 형식으로 표시합니다.
  */
 const TimerDisplay: React.FC<TimerDisplayProps> = ({
   time,
   isActive,
   secondChanged,
 }) => {
-  const theme = useTheme();
-
-  // 시간 표시 형식 변환 (MM:SS)
-  const formatTime = () => {
-    const minutes = Math.floor(time / 60);
-    const seconds = time % 60;
-    return `${minutes.toString().padStart(2, "0")}:${seconds
+  // 시간 포맷팅 (MM:SS)
+  const formatTime = (seconds: number): string => {
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    return `${minutes.toString().padStart(2, "0")}:${remainingSeconds
       .toString()
       .padStart(2, "0")}`;
   };
 
   return (
-    <>
+    <Box
+      sx={{
+        textAlign: "center",
+        mb: 3,
+      }}
+    >
+      {/* 타이머 제목 */}
       <Box
         sx={{
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          mb: 3,
-          position: "relative",
+          mb: 1,
         }}
       >
-        <Box
-          sx={{
-            position: "absolute",
-            width: "100%",
-            height: "100%",
-            backgroundColor: "rgba(0, 0, 0, 0.03)",
-            borderRadius: "50%",
-            filter: "blur(15px)",
-            zIndex: -1,
-            transform: "scale(1.5)",
-          }}
-        />
         <TimerIcon
-          color="primary"
           sx={{
-            mr: 1.5,
-            fontSize: { xs: 32, sm: 36 },
-            filter: "drop-shadow(0px 2px 4px rgba(0, 0, 0, 0.2))",
+            mr: 1,
+            color: isActive ? "primary.main" : "text.secondary",
           }}
         />
         <Typography
-          variant="h5"
+          variant="h6"
           component="h2"
-          fontWeight="bold"
           sx={{
-            background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`,
-            WebkitBackgroundClip: "text",
-            WebkitTextFillColor: "transparent",
-            letterSpacing: "0.5px",
-            textShadow: "0px 2px 4px rgba(0, 0, 0, 0.1)",
+            fontWeight: 500,
+            color: isActive ? "primary.main" : "text.secondary",
           }}
         >
-          타이머
+          배변 타이머
         </Typography>
       </Box>
 
-      <Box
+      {/* 타이머 시간 표시 */}
+      <Typography
+        variant="h2"
+        component="div"
         sx={{
-          p: 2,
-          mb: 3,
-          borderRadius: theme.shape.borderRadius,
-          background: "transparent",
-          boxShadow: "none",
-          transition: "all 0.3s ease",
-          animation: "none",
+          fontWeight: 700,
+          fontSize: { xs: "3rem", sm: "4rem" },
+          fontFamily: "monospace",
+          letterSpacing: "0.1em",
+          color: isActive ? "primary.main" : "text.primary",
+          animation: secondChanged ? "fadeInOut 0.5s ease-in-out" : "none",
+          display: "inline-block",
+          lineHeight: 1.2,
+          mt: 2,
+          mb: 4,
+          position: "relative",
+          "&::after": isActive
+            ? {
+                content: '""',
+                position: "absolute",
+                bottom: "-10px",
+                left: "50%",
+                transform: "translateX(-50%)",
+                width: "100px",
+                height: "3px",
+                background: (theme) =>
+                  `linear-gradient(90deg, transparent, ${theme.palette.primary.main}, transparent)`,
+                borderRadius: "3px",
+              }
+            : {},
         }}
       >
-        <Typography
-          variant="h2"
-          component="div"
-          sx={{
-            fontWeight: "bold",
-            fontSize: { xs: "2.5rem", sm: "3.5rem" },
-            color: isActive
-              ? theme.palette.primary.main
-              : theme.palette.text.primary,
-            textShadow: isActive
-              ? "0px 2px 10px rgba(0, 0, 0, 0.15)"
-              : "0px 2px 5px rgba(0, 0, 0, 0.1)",
-            fontFamily: "'Roboto Mono', monospace",
-            letterSpacing: "1px",
-            transition: "all 0.3s ease",
-            animation: secondChanged ? `${fadeInOut} 0.5s ease-out` : "none",
-          }}
-        >
-          {formatTime()}
-        </Typography>
-      </Box>
-    </>
+        {formatTime(time)}
+      </Typography>
+    </Box>
   );
 };
 

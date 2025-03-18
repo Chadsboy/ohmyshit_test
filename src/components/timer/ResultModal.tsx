@@ -6,232 +6,201 @@ import {
   DialogActions,
   Button,
   FormControl,
-  FormLabel,
-  RadioGroup,
   FormControlLabel,
   Radio,
+  RadioGroup,
   TextField,
-  CircularProgress,
-  Box,
   Typography,
-  Fade,
-  Stepper,
-  Step,
-  StepLabel,
+  Box,
+  MenuItem,
+  IconButton,
+  Slide,
+  FormLabel,
+  CircularProgress,
+  useMediaQuery,
+  useTheme,
 } from "@mui/material";
-import { StoolAmount } from "./TimerResultHandler";
+import { TransitionProps } from "@mui/material/transitions";
+import { Close as CloseIcon, CheckCircle, Cancel } from "@mui/icons-material";
+
+const Transition = React.forwardRef(function Transition(
+  props: TransitionProps & {
+    children: React.ReactElement;
+  },
+  ref: React.Ref<unknown>
+) {
+  return <Slide direction="up" ref={ref} {...props} />;
+});
 
 interface ResultModalProps {
   open: boolean;
   onClose: () => void;
-  onSave: (
-    isSuccess: boolean,
-    stoolAmount: StoolAmount,
-    memo: string
-  ) => Promise<void>;
-  isSaving: boolean;
+  onSave: (result: {
+    success: boolean;
+    amount?: string;
+    memo?: string;
+  }) => void;
+  isSaving?: boolean;
 }
 
 /**
- * 타이머 결과 입력 모달 컴포넌트
+ * 타이머 결과 입력 모달
+ * 배변 성공 여부와 배변량, 메모를 입력할 수 있습니다.
  */
 const ResultModal: React.FC<ResultModalProps> = ({
   open,
   onClose,
   onSave,
-  isSaving,
+  isSaving = false,
 }) => {
-  const [activeStep, setActiveStep] = useState(0);
-  const [selectedResult, setSelectedResult] = useState<"success" | "fail">(
-    "success"
-  );
-  const [stoolAmount, setStoolAmount] = useState<StoolAmount>("");
-  const [memo, setMemo] = useState("");
+  const theme = useTheme();
+  const fullScreen = useMediaQuery(theme.breakpoints.down("sm"));
 
-  // 모달이 닫힐 때 초기화
-  React.useEffect(() => {
-    if (!open) {
-      setActiveStep(0);
-      resetForm();
-    }
-  }, [open]);
+  const [success, setSuccess] = useState<boolean>(true);
+  const [amount, setAmount] = useState<string>("보통");
+  const [memo, setMemo] = useState<string>("");
 
-  const handleChangeResult = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setSelectedResult(event.target.value as "success" | "fail");
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onSave({
+      success,
+      amount: success ? amount : undefined,
+      memo: memo.trim() !== "" ? memo : undefined,
+    });
   };
 
-  const handleChangeAmount = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setStoolAmount(event.target.value as StoolAmount);
-  };
-
-  const handleChangeMemo = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setMemo(event.target.value);
-  };
-
-  const handleNextStep = () => {
-    if (selectedResult === "success") {
-      setActiveStep(1); // 성공일 경우 다음 단계로
-    } else {
-      handleSave(); // 실패일 경우 바로 저장
-    }
-  };
-
-  const handleBackStep = () => {
-    setActiveStep(0);
-  };
-
-  const handleSave = async () => {
-    try {
-      await onSave(selectedResult === "success", stoolAmount, memo);
-      resetForm();
-    } catch (err) {
-      console.error("결과 저장 실패:", err);
-    }
-  };
-
-  const resetForm = () => {
-    setActiveStep(0);
-    setSelectedResult("success");
-    setStoolAmount("");
+  const handleClose = () => {
+    setSuccess(true);
+    setAmount("보통");
     setMemo("");
+    onClose();
   };
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle>
-        <Typography variant="h6" component="div" sx={{ fontWeight: "bold" }}>
+    <Dialog
+      open={open}
+      onClose={isSaving ? undefined : handleClose}
+      fullScreen={fullScreen}
+      maxWidth="xs"
+      fullWidth
+      PaperProps={{
+        sx: {
+          borderRadius: 2,
+          boxShadow: "0 8px 32px rgba(0, 0, 0, 0.12)",
+        },
+      }}
+    >
+      <DialogTitle
+        sx={{
+          pb: 1,
+          display: "flex",
+          alignItems: "center",
+          borderBottom: `1px solid ${theme.palette.divider}`,
+        }}
+      >
+        <Typography
+          variant="h6"
+          component="div"
+          sx={{ fontWeight: 600, flex: 1 }}
+        >
           배변 결과 입력
         </Typography>
       </DialogTitle>
 
-      <DialogContent>
-        <Box sx={{ width: "100%", mt: 2, mb: 3 }}>
-          <Stepper activeStep={activeStep} alternativeLabel>
-            <Step>
-              <StepLabel>결과 선택</StepLabel>
-            </Step>
-            <Step>
-              <StepLabel>세부 정보</StepLabel>
-            </Step>
-          </Stepper>
-        </Box>
+      <form onSubmit={handleSubmit}>
+        <DialogContent sx={{ pt: 3 }}>
+          <FormControl component="fieldset" sx={{ mb: 3 }}>
+            <FormLabel component="legend">배변에 성공했나요?</FormLabel>
+            <RadioGroup
+              row
+              value={success ? "success" : "fail"}
+              onChange={(e) => setSuccess(e.target.value === "success")}
+            >
+              <FormControlLabel
+                value="success"
+                control={
+                  <Radio
+                    color="success"
+                    icon={<CheckCircle color="action" />}
+                    checkedIcon={<CheckCircle />}
+                  />
+                }
+                label="성공"
+              />
+              <FormControlLabel
+                value="fail"
+                control={
+                  <Radio
+                    color="error"
+                    icon={<Cancel color="action" />}
+                    checkedIcon={<Cancel />}
+                  />
+                }
+                label="실패"
+              />
+            </RadioGroup>
+          </FormControl>
 
-        {activeStep === 0 && (
-          <Box sx={{ pt: 1 }}>
-            <FormControl component="fieldset" sx={{ mb: 2 }}>
-              <FormLabel component="legend">결과</FormLabel>
+          {success && (
+            <FormControl fullWidth sx={{ mb: 3 }}>
+              <FormLabel component="legend">대변량</FormLabel>
               <RadioGroup
                 row
-                value={selectedResult}
-                onChange={handleChangeResult}
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
               >
                 <FormControlLabel
-                  value="success"
+                  value="small"
                   control={<Radio />}
-                  label="성공"
+                  label="소량"
                 />
                 <FormControlLabel
-                  value="fail"
+                  value="medium"
                   control={<Radio />}
-                  label="실패"
+                  label="보통"
+                />
+                <FormControlLabel
+                  value="large"
+                  control={<Radio />}
+                  label="다량"
                 />
               </RadioGroup>
             </FormControl>
-          </Box>
-        )}
+          )}
 
-        {activeStep === 1 && (
-          <Fade in={activeStep === 1}>
-            <Box sx={{ pt: 1 }}>
-              <FormControl
-                component="fieldset"
-                sx={{ mb: 2, display: "block" }}
-              >
-                <FormLabel component="legend">배변량</FormLabel>
-                <RadioGroup
-                  row
-                  value={stoolAmount}
-                  onChange={handleChangeAmount}
-                >
-                  <FormControlLabel
-                    value="많음"
-                    control={<Radio />}
-                    label="많음"
-                  />
-                  <FormControlLabel
-                    value="보통"
-                    control={<Radio />}
-                    label="보통"
-                  />
-                  <FormControlLabel
-                    value="적음"
-                    control={<Radio />}
-                    label="적음"
-                  />
-                  <FormControlLabel
-                    value="이상"
-                    control={<Radio />}
-                    label="이상"
-                  />
-                </RadioGroup>
-              </FormControl>
+          <TextField
+            label="메모"
+            multiline
+            rows={3}
+            value={memo}
+            onChange={(e) => setMemo(e.target.value)}
+            fullWidth
+            variant="outlined"
+            placeholder="메모를 입력하세요 (선택사항)"
+          />
+        </DialogContent>
 
-              <FormControl fullWidth sx={{ mb: 2 }}>
-                <FormLabel>메모 (선택사항)</FormLabel>
-                <TextField
-                  value={memo}
-                  onChange={handleChangeMemo}
-                  fullWidth
-                  multiline
-                  rows={3}
-                  variant="outlined"
-                  placeholder="추가 내용을 입력하세요 (선택사항)"
-                  margin="normal"
-                />
-              </FormControl>
-            </Box>
-          </Fade>
-        )}
-      </DialogContent>
-
-      <DialogActions>
-        {activeStep === 0 ? (
-          <>
-            <Button onClick={onClose} color="inherit" disabled={isSaving}>
-              취소
-            </Button>
-            <Button
-              onClick={handleNextStep}
-              color="primary"
-              variant="contained"
-              disabled={isSaving}
-            >
-              {selectedResult === "success" ? "다음" : "저장"}
-            </Button>
-          </>
-        ) : (
-          <>
-            <Button
-              onClick={handleBackStep}
-              color="inherit"
-              disabled={isSaving}
-            >
-              이전
-            </Button>
-            <Button
-              onClick={handleSave}
-              color="primary"
-              variant="contained"
-              disabled={!stoolAmount || isSaving}
-              startIcon={
-                isSaving ? <CircularProgress size={20} color="inherit" /> : null
-              }
-            >
-              {isSaving ? "저장 중..." : "저장"}
-            </Button>
-          </>
-        )}
-      </DialogActions>
+        <DialogActions sx={{ px: 3, pb: 3 }}>
+          <Button
+            onClick={handleClose}
+            color="inherit"
+            disabled={isSaving}
+            variant="outlined"
+            sx={{ mr: 1 }}
+          >
+            취소
+          </Button>
+          <Button
+            type="submit"
+            color="primary"
+            variant="contained"
+            disabled={isSaving || (success && amount === "")}
+            startIcon={isSaving ? <CircularProgress size={20} /> : null}
+          >
+            {isSaving ? "저장 중..." : "저장"}
+          </Button>
+        </DialogActions>
+      </form>
     </Dialog>
   );
 };

@@ -7,6 +7,7 @@ import {
   Typography,
   CircularProgress,
   Box,
+  Tooltip,
 } from "@mui/material";
 import { Close as CloseIcon } from "@mui/icons-material";
 import EventList from "./EventList";
@@ -45,28 +46,37 @@ const EventModal: React.FC<EventModalProps> = ({
     console.log("EventModal - selectedEvents:", selectedEvents);
   }, [selectedDate, selectedEvents]);
 
-  // 날짜 포맷 변환 (YYYY-MM-DD를 YY-MM-DD로)
+  // 날짜 포맷 변환 (YYYY-MM-DD를 YYYY-MM-DD EEE 형식으로 변경)
   const formattedDate = React.useMemo(() => {
     if (!selectedDate) return "";
     try {
       const date = parse(selectedDate, "yyyy-MM-dd", new Date());
-      return format(date, "yy-MM-dd", { locale: ko });
+      return format(date, "yyyy-MM-dd EEE", { locale: ko });
     } catch (error) {
       console.error("날짜 변환 오류:", error);
       return selectedDate;
     }
   }, [selectedDate]);
 
+  // 개별 이벤트 삭제 처리 함수
   const handleDeleteEvent = useCallback(
     async (eventId: string) => {
       setIsLocalDeleting(true);
       try {
         await onDeleteEvent(eventId);
+
+        // 모든 이벤트가 삭제되었는지 확인
+        if (selectedEvents.length <= 1) {
+          // 마지막 이벤트였다면 모달 닫기
+          onClose();
+        }
+      } catch (error) {
+        console.error("이벤트 삭제 중 오류 발생:", error);
       } finally {
         setIsLocalDeleting(false);
       }
     },
-    [onDeleteEvent]
+    [onDeleteEvent, selectedEvents.length, onClose]
   );
 
   return (
@@ -87,6 +97,8 @@ const EventModal: React.FC<EventModalProps> = ({
         <Typography variant="h6" component="div" fontWeight="bold">
           {formattedDate}
         </Typography>
+
+        {/* 닫기 버튼 */}
         <IconButton
           aria-label="close"
           onClick={onClose}
@@ -126,7 +138,7 @@ const EventModal: React.FC<EventModalProps> = ({
             onEdit={onEditEvent}
             onDelete={handleDeleteEvent}
             disabled={isActuallyDeleting}
-            hideActions={true} // 수정/삭제 버튼 숨김
+            hideActions={true} // 리스트 내 기본 수정/삭제 버튼은 숨김 (커스텀 버튼 사용)
           />
         )}
       </DialogContent>
