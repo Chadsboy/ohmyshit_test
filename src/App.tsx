@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { Box, CircularProgress, Typography } from "@mui/material";
 import { supabase } from "./lib/supabase";
 import { CssBaseline } from "@mui/material";
-import { AuthenticatedRoutes, UnauthenticatedRoutes } from "./routes/index.tsx";
+import { AuthenticatedRoutes, UnauthenticatedRoutes } from "./routes/index";
 
 function App() {
   const [session, setSession] = useState<any>(null);
