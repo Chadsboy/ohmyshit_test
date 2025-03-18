@@ -1,19 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
-import {
-  Box,
-  Typography,
-  Paper,
-  useTheme,
-  keyframes,
-  Fade,
-} from "@mui/material";
+import { Box, Typography, Paper, useTheme, Fade, Slide } from "@mui/material";
 import { NewReleases } from "@mui/icons-material";
-
-// 텍스트 슬라이드 애니메이션 (오른쪽에서 중앙으로)
-const slideInKeyframes = keyframes`
-  0% { transform: translateX(100%); }
-  100% { transform: translateX(0); }
-`;
 
 interface AlertProps {
   isTimerActive?: boolean; // 타이머 활성화 여부
@@ -22,8 +9,8 @@ interface AlertProps {
 const Alert: React.FC<AlertProps> = ({ isTimerActive = false }) => {
   const theme = useTheme();
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [textVisible, setTextVisible] = useState(true);
-  const [isAnimating, setIsAnimating] = useState(false);
+  const [visible, setVisible] = useState(true);
+  const [slideIn, setSlideIn] = useState(true);
   const textRef = useRef<HTMLElement>(null);
 
   // 뉴스 헤드라인 목록
@@ -45,34 +32,27 @@ const Alert: React.FC<AlertProps> = ({ isTimerActive = false }) => {
     let timeoutId: NodeJS.Timeout;
 
     const changeHeadline = () => {
-      // 현재 문구 페이드 아웃
-      setTextVisible(false);
-      setIsAnimating(false);
+      // 현재 문구 페이드 아웃 및 슬라이드 애웃
+      setVisible(false);
+      setSlideIn(false);
 
       // 텍스트가 사라진 후 새 문구로 교체
       timeoutId = setTimeout(() => {
         setCurrentIndex((prevIndex) => (prevIndex + 1) % headlines.length);
-        setTextVisible(true);
-        setIsAnimating(true);
+        setVisible(true);
+        setSlideIn(true);
 
-        // 애니메이션 종료 후 잠시 대기
-        const animDuration = 1200; // 애니메이션 시간 (ms)
-        const stayDuration = 3500; // 문구 유지 시간 (ms)
-
-        // 다음 문구 변경 예약
+        // 다음 문구 변경 예약 (5초 후)
         timeoutId = setTimeout(() => {
           changeHeadline();
-        }, animDuration + stayDuration);
-      }, 400);
+        }, 5000);
+      }, 500);
     };
 
-    // 최초 실행
-    setIsAnimating(true);
-
-    // 첫 번째 변경을 예약 (애니메이션 + 유지 시간 후)
+    // 최초 실행 - 5초 후 변경 시작
     timeoutId = setTimeout(() => {
       changeHeadline();
-    }, 4000);
+    }, 5000);
 
     return () => {
       clearTimeout(timeoutId);
@@ -129,27 +109,30 @@ const Alert: React.FC<AlertProps> = ({ isTimerActive = false }) => {
             justifyContent: "center", // 중앙 정렬
           }}
         >
-          <Fade in={textVisible} timeout={400}>
-            <Typography
-              ref={textRef}
-              variant="body2"
-              sx={{
-                fontWeight: 500,
-                color: theme.palette.text.primary,
-                fontSize: { xs: "0.9rem", sm: "1rem" },
-                whiteSpace: "nowrap",
-                animation: isAnimating
-                  ? `${slideInKeyframes} 1.2s ease-out forwards`
-                  : "none",
-                // 애니메이션이 완료된 후 중앙에 위치하도록 설정
-                position: "relative",
-                textAlign: "center",
-                maxWidth: "90%",
-              }}
-            >
-              {headlines[currentIndex]}
-            </Typography>
-          </Fade>
+          <Slide
+            direction="left"
+            in={slideIn}
+            mountOnEnter
+            unmountOnExit
+            timeout={800}
+          >
+            <Fade in={visible} timeout={400}>
+              <Typography
+                ref={textRef}
+                variant="body2"
+                sx={{
+                  fontWeight: 500,
+                  color: theme.palette.text.primary,
+                  fontSize: { xs: "0.9rem", sm: "1rem" },
+                  whiteSpace: "nowrap",
+                  textAlign: "center",
+                  maxWidth: "90%",
+                }}
+              >
+                {headlines[currentIndex]}
+              </Typography>
+            </Fade>
+          </Slide>
         </Box>
       </Box>
     </Paper>
