@@ -44,14 +44,14 @@ const Home = () => {
 
   return (
     <>
-      <Container maxWidth="xs" sx={{ px: { xs: 2, sm: 3 } }}>
+      <Container maxWidth="md" sx={{ px: { xs: 0, sm: 2, md: 3 } }}>
         <Box
           sx={{
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
             textAlign: "center",
-            py: 2,
+            py: { xs: 1, sm: 2 },
             minHeight: "calc(100vh - 120px)", // 알림 영역을 위한 공간 확보
           }}
         >
@@ -59,9 +59,14 @@ const Home = () => {
           <Box
             sx={{
               width: "100%",
-              maxWidth: { xs: "300px", sm: "400px" },
               height: "auto",
-              mb: 3,
+              mb: 5,
+              mt: 0,
+              display: "flex",
+              justifyContent: "center",
+              overflow: "visible",
+              position: "relative",
+              zIndex: 1,
             }}
           >
             <img
@@ -69,9 +74,14 @@ const Home = () => {
               alt="홈페이지 이미지"
               style={{
                 width: "100%",
+                minWidth: "320px",
                 height: "auto",
-                maxWidth: "100%",
+                minHeight: "200px",
+                maxWidth: "1000px",
                 objectFit: "contain",
+                transform: "scale(1.3)",
+                transformOrigin: "center top",
+                marginBottom: "20px",
               }}
             />
           </Box>

@@ -35,7 +35,7 @@ const TimerDisplay: React.FC<TimerDisplayProps> = ({
     <Box
       sx={{
         textAlign: "center",
-        mb: 3,
+        mb: 2,
       }}
     >
       {/* 타이머 제목 */}
@@ -61,7 +61,7 @@ const TimerDisplay: React.FC<TimerDisplayProps> = ({
             color: isActive ? "primary.main" : "text.secondary",
           }}
         >
-          배변 타이머
+          Sh!t Start !
         </Typography>
       </Box>
 
@@ -75,11 +75,11 @@ const TimerDisplay: React.FC<TimerDisplayProps> = ({
           fontFamily: "monospace",
           letterSpacing: "0.1em",
           color: isActive ? "primary.main" : "text.primary",
-          animation: secondChanged ? "fadeInOut 0.5s ease-in-out" : "none",
+          animation: isActive ? "pulsate 3s infinite ease-in-out" : "none",
           display: "inline-block",
           lineHeight: 1.2,
-          mt: 2,
-          mb: 4,
+          mt: 1,
+          mb: 2,
           position: "relative",
           "&::after": isActive
             ? {

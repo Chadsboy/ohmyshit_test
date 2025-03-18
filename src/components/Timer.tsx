@@ -173,7 +173,7 @@ const Timer: React.FC = () => {
 
   // 타이머 시간 1분 추가
   const handleAddTime = () => {
-    addTime(60); // 1분 = 60초 추가
+    addTime(180); // 3분 = 180초 추가
   };
 
   return (
@@ -187,7 +187,7 @@ const Timer: React.FC = () => {
           maxWidth: 400,
           mx: "auto",
           textAlign: "center",
-          animation: isActive ? "pulsate 3s infinite ease-in-out" : "none",
+          animation: "none",
         }}
       >
         {/* 타이머 표시 부분 */}

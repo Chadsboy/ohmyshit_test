@@ -4,8 +4,8 @@ import { createTimerSlice, TimerSlice } from "./slices/timerSlice";
 import { setupBrowserEvents } from "../utils/browserEventHandlers";
 import { TIMER_COMPLETED_EVENT } from "./timerEvents";
 
-// 타이머의 기본 시간(8분 = 480초)
-const DEFAULT_TIMER_TIME = 8 * 60;
+// 타이머의 기본 시간(5분 = 300초)
+const DEFAULT_TIMER_TIME = 5 * 60;
 
 // 글로벌 타이머 인터벌 레퍼런스
 let timerInterval: NodeJS.Timeout | null = null;
