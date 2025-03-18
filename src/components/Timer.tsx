@@ -1,243 +1,172 @@
 import React, { useState, useEffect } from "react";
-import { Box, Paper, useTheme, useMediaQuery } from "@mui/material";
+import { Box, useTheme, useMediaQuery, keyframes } from "@mui/material";
 
 // 모듈화된 컴포넌트 임포트
 import TimerDisplay from "./timer/TimerDisplay";
 import TimerControls from "./timer/TimerControls";
-import ResultModal from "./timer/ResultModal";
+import ResultModal from "./modal/ResultModal";
 import ContentModal from "./modal/ContentModal";
-
-// 타이머 결과 처리 임포트
-import { TimerResultHandler, StoolAmount } from "./timer/TimerResultHandler";
 
 // 타이머 스토어 임포트
 import { useTimerStore } from "../store/timerStore";
-import { TIMER_COMPLETED_EVENT } from "../store/timerEvents";
+import { TimerResultHandler, StoolAmount } from "./timer/TimerResultHandler";
 
-interface TimerProps {
-  initialTime?: number; // 초 단위
-  noBackground?: boolean; // 배경 제거 옵션
-  onTimerStateChange?: (isActive: boolean) => void; // 타이머 상태 변경 알림 콜백
-}
+// 숫자가 바뀔 때 페이드 애니메이션
+const fadeInOut = keyframes`
+  0% { opacity: 0.7; transform: scale(1.02); }
+  50% { opacity: 1; transform: scale(1.05); }
+  100% { opacity: 1; transform: scale(1); }
+`;
 
-const Timer: React.FC<TimerProps> = ({
-  initialTime = 8 * 60,
-  noBackground = false,
-  onTimerStateChange,
-}) => {
-  const {
-    isActive,
-    time,
-    timerStartTime,
-    timerEndTime,
-    hasAddedTime,
-    isCompleted,
-    shouldShowModal,
-    setActive,
-    setTime,
-    setIsCompleted,
-    setShouldShowModal,
-    resetTimer: resetTimerStore,
-    startTimer: startTimerStore,
-    pauseTimer: pauseTimerStore,
-    addTime: addTimeStore,
-  } = useTimerStore();
+// 타이머 활성화 시 맥동 애니메이션
+const pulsate = keyframes`
+  0% { transform: scale(1); }
+  50% { transform: scale(1.03); }
+  100% { transform: scale(1); }
+`;
 
-  const [secondChanged, setSecondChanged] = useState<boolean>(false);
-  const [openResultModal, setOpenResultModal] = useState<boolean>(false);
-  const [openContentModal, setOpenContentModal] = useState<boolean>(false);
-  const [isSaving, setIsSaving] = useState<boolean>(false);
+/**
+ * 타이머 컴포넌트
+ * 배변 활동을 위한 타이머입니다.
+ */
+const Timer: React.FC = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
-  // useEffect를 추가하여 컴포넌트 마운트 시 초기화
-  useEffect(() => {
-    // 초기 마운트 시에만 초기화
-    if (!time && !isActive) {
-      setTime(initialTime);
-    }
-  }, []);
+  // 타이머 상태 관리
+  const {
+    isActive,
+    time,
+    hasAddedTime,
+    resetTimer,
+    startTimer,
+    pauseTimer,
+    addTime,
+    shouldShowModal,
+    setShouldShowModal,
+    timerStartTime,
+    timerEndTime,
+  } = useTimerStore();
 
-  // 시간 변경 감지 및 애니메이션 처리
+  // 초 변경 감지
+  const [secondChanged, setSecondChanged] = useState(false);
+  const [openContentModal, setOpenContentModal] = useState<boolean>(false);
+  const [isSaving, setIsSaving] = useState<boolean>(false);
+
+  // 초 변경 효과 처리
   useEffect(() => {
     setSecondChanged(true);
-    const timer = setTimeout(() => setSecondChanged(false), 500);
+    const timer = setTimeout(() => {
+      setSecondChanged(false);
+    }, 500);
+
     return () => clearTimeout(timer);
   }, [time]);
 
-  // 타이머 시작
-  const startTimer = () => {
-    startTimerStore();
-    onTimerStateChange && onTimerStateChange(true);
-  };
-
-  // 타이머 일시정지
-  const pauseTimer = () => {
-    pauseTimerStore();
-    onTimerStateChange && onTimerStateChange(false);
-  };
-
-  // 타이머 리셋
-  const resetTimer = () => {
-    resetTimerStore();
-    onTimerStateChange && onTimerStateChange(false);
-  };
-
-  // 타이머 상태 변경 시 콜백 호출
-  useEffect(() => {
-    onTimerStateChange && onTimerStateChange(isActive);
-  }, [isActive, onTimerStateChange]);
-
-  // 타이머 완료 이벤트 리스너
-  useEffect(() => {
-    const handleTimerCompleted = () => {
-      setOpenResultModal(true);
-    };
-
-    window.addEventListener(TIMER_COMPLETED_EVENT, handleTimerCompleted);
-
-    return () => {
-      window.removeEventListener(TIMER_COMPLETED_EVENT, handleTimerCompleted);
-    };
-  }, []);
-
-  // 결과 모달 상태 감시
-  useEffect(() => {
-    if (shouldShowModal) {
-      setOpenResultModal(true);
-    }
-  }, [shouldShowModal]);
-
-  // 페이지 가시성 변경 감지
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === "visible") {
-        // 페이지가 다시 보일 때 애니메이션 재설정
-        setSecondChanged(true);
-        setTimeout(() => setSecondChanged(false), 500);
-      }
-    };
-
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-    return () => {
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
-    };
-  }, []);
-
-  // 결과 모달 열기
-  const handleOpenResultModal = () => {
-    pauseTimerStore(); // 타이머 비활성화
-    setOpenResultModal(true); // 결과 모달 열기
-    setShouldShowModal(true); // 스토어 상태도 업데이트
-  };
-
-  // 결과 모달 닫기 시 shouldShowModal 상태 업데이트
-  const handleCloseResultModal = () => {
-    setOpenResultModal(false);
-    setShouldShowModal(false); // 스토어 상태도 업데이트
-  };
-
-  // 콘텐츠 모달 열기
+  // 타이머 내용 모달 열기
   const handleOpenContentModal = () => {
     setOpenContentModal(true);
   };
 
-  // 결과 저장 후 처리
-  const handleSaveResult = async (
-    isSuccess: boolean,
-    stoolAmount: StoolAmount,
-    memo: string
-  ) => {
-    setIsSaving(true);
+  // 결과 모달 열기
+  const handleOpenResultModal = () => {
+    pauseTimer();
+    setShouldShowModal(true);
+  };
 
+  // 결과 모달 닫기
+  const handleCloseResultModal = () => {
+    setShouldShowModal(false);
+    // 모달이 닫힐 때 타이머 다시 시작
+    startTimer();
+  };
+
+  // 배변 결과 성공 저장 처리
+  const handleSuccess = async (amount: StoolAmount, memo: string) => {
     try {
-      if (isSuccess) {
-        await TimerResultHandler.handleSuccess(
-          stoolAmount,
-          memo,
-          timerStartTime,
-          timerEndTime
-        );
-      } else {
-        await TimerResultHandler.handleFail(timerStartTime, timerEndTime);
-      }
+      setIsSaving(true);
 
-      // 성공적으로 저장된 후 모달 닫기 및 타이머 리셋
-      setOpenResultModal(false);
+      // TimerResultHandler를 사용하여 성공 기록 저장
+      await TimerResultHandler.handleSuccess(
+        amount,
+        memo,
+        new Date(timerStartTime ?? Date.now()),
+        timerEndTime ? new Date(timerEndTime) : new Date()
+      );
+
+      // 모달 닫기
       setShouldShowModal(false);
-      setIsCompleted(false);
+
+      // 타이머 리셋
       resetTimer();
     } catch (error) {
-      console.error("결과 저장 중 오류 발생:", error);
-      // 오류 처리 (예: 사용자에게 알림 표시)
+      console.error("배변 결과 저장 실패:", error);
     } finally {
       setIsSaving(false);
     }
   };
 
-  // 타이머 컨텐츠 렌더링
-  const renderTimerContent = () => (
-    <>
+  // 배변 결과 실패 저장 처리
+  const handleFail = async () => {
+    try {
+      setIsSaving(true);
+
+      // TimerResultHandler를 사용하여 실패 기록 저장
+      await TimerResultHandler.handleFail(
+        new Date(timerStartTime ?? Date.now()),
+        timerEndTime ? new Date(timerEndTime) : new Date()
+      );
+
+      // 모달 닫기
+      setShouldShowModal(false);
+
+      // 타이머 리셋
+      resetTimer();
+    } catch (error) {
+      console.error("배변 결과 저장 실패:", error);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // 타이머 시간 1분 추가
+  const handleAddTime = () => {
+    addTime(60); // 1분 = 60초 추가
+  };
+
+  return (
+    <Box
+      sx={{
+        width: "100%",
+        maxWidth: 400,
+        mx: "auto",
+        textAlign: "center",
+        animation: isActive ? `${pulsate} 3s infinite ease-in-out` : "none",
+      }}
+    >
+      {/* 타이머 표시 부분 */}
       <TimerDisplay
         time={time}
         isActive={isActive}
         secondChanged={secondChanged}
       />
 
+      {/* 타이머 컨트롤 버튼들 */}
       <TimerControls
         isActive={isActive}
         hasAddedTime={hasAddedTime}
         onStart={startTimer}
-        onAddTime={addTimeStore}
+        onAddTime={handleAddTime}
         onOpenContent={handleOpenContentModal}
         onOpenResult={handleOpenResultModal}
       />
-    </>
-  );
 
-  return (
-    <>
-      {noBackground ? (
-        <Box
-          sx={{
-            width: "100%",
-            maxWidth: 400,
-            textAlign: "center",
-            px: 2,
-            py: 1,
-          }}
-        >
-          {renderTimerContent()}
-        </Box>
-      ) : (
-        <Paper
-          elevation={3}
-          sx={{
-            p: 3,
-            borderRadius: 2,
-            width: "100%",
-            maxWidth: 400,
-            textAlign: "center",
-            mt: 4,
-            background:
-              theme.palette.mode === "dark"
-                ? `linear-gradient(145deg, ${theme.palette.background.paper}, ${theme.palette.background.default})`
-                : `linear-gradient(145deg, #ffffff, #f5f5f5)`,
-            boxShadow:
-              theme.palette.mode === "dark"
-                ? "0px 8px 25px rgba(0, 0, 0, 0.3)"
-                : "0px 8px 25px rgba(0, 0, 0, 0.1)",
-          }}
-        >
-          {renderTimerContent()}
-        </Paper>
-      )}
-
-      {/* 결과 모달 */}
+      {/* 결과 입력 모달 - 단계별 모달로 변경 */}
       <ResultModal
-        open={openResultModal}
+        open={shouldShowModal}
         onClose={handleCloseResultModal}
-        onSave={handleSaveResult}
+        onSuccess={handleSuccess}
+        onFail={handleFail}
         isSaving={isSaving}
       />
 
@@ -246,7 +175,7 @@ const Timer: React.FC<TimerProps> = ({
         open={openContentModal}
         onClose={() => setOpenContentModal(false)}
       />
-    </>
+    </Box>
   );
 };
 

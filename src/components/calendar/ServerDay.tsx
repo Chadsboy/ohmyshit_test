@@ -36,7 +36,7 @@ const ServerDay: React.FC<ServerDayProps> = (props) => {
   // 한국 시간대 기준으로 날짜 포맷 (명시적으로 UTC에서 변환)
   const formattedDate = day.tz(KOREA_TIMEZONE).format("YYYY-MM-DD");
 
-  // 해당 날짜에 이벤트가 있는지 확인
+  // 날짜 및 하이라이트 상태 디버깅
   const isHighlighted =
     !outsideCurrentMonth && highlightedDays.includes(formattedDate);
 
