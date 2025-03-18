@@ -23,6 +23,7 @@ import {
 } from "@mui/material";
 import { PhotoCamera } from "@mui/icons-material";
 import { supabase } from "../lib/supabase";
+import { useAuth } from "../hooks/useAuth";
 
 interface UserData {
   email: string | null;
@@ -33,6 +34,7 @@ interface UserData {
 }
 
 const Profile = () => {
+  const { updateUserProfile } = useAuth();
   const [user, setUser] = useState<UserData>({
     email: null,
     gender: null,
@@ -47,6 +49,7 @@ const Profile = () => {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [openSnackbar, setOpenSnackbar] = useState(false);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
 
   // 비밀번호 변경 폼 상태
   const [passwords, setPasswords] = useState({
@@ -161,8 +164,28 @@ const Profile = () => {
         return;
       }
 
-      setUploadLoading(true);
       const file = event.target.files[0];
+
+      // 파일 크기 검증 (10MB 제한)
+      if (file.size > 10 * 1024 * 1024) {
+        throw new Error("파일 크기는 10MB를 초과할 수 없습니다.");
+      }
+
+      // 파일 형식 검증
+      const validTypes = ["image/jpeg", "image/png", "image/gif"];
+      if (!validTypes.includes(file.type)) {
+        throw new Error("JPG, PNG 또는 GIF 파일만 업로드할 수 있습니다.");
+      }
+
+      // 미리보기 생성
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setAvatarPreview(e.target?.result as string);
+      };
+      reader.readAsDataURL(file);
+
+      setUploadLoading(true);
+
       const fileExt = file.name.split(".").pop();
       const fileName = `${Math.random()}.${fileExt}`;
       const filePath = `avatars/${fileName}`;
@@ -173,6 +196,23 @@ const Profile = () => {
       } = await supabase.auth.getSession();
       if (!session) {
         throw new Error("로그인 세션이 존재하지 않습니다.");
+      }
+
+      // 이전 이미지가 있다면 URL에서 파일 경로 추출하여 삭제 시도
+      if (user.avatar_url) {
+        try {
+          // URL에서 파일명 추출 (URL의 마지막 부분)
+          const urlParts = user.avatar_url.split("/");
+          const oldFileName = urlParts[urlParts.length - 1];
+
+          if (oldFileName) {
+            const oldFilePath = `avatars/${oldFileName}`;
+            await supabase.storage.from("avatars").remove([oldFilePath]);
+          }
+        } catch (deleteError) {
+          console.warn("이전 이미지 삭제 실패:", deleteError);
+          // 삭제 실패해도 계속 진행
+        }
       }
 
       // 파일 업로드
@@ -192,21 +232,28 @@ const Profile = () => {
       // 사용자 프로필 업데이트
       const { error: updateError } = await supabase
         .from("users")
-        .update({ avatar_url: publicUrl })
+        .update({
+          avatar_url: publicUrl,
+        })
         .eq("id", session.user.id);
 
       if (updateError) {
         throw updateError;
       }
 
-      // 상태 업데이트
+      // 로컬 상태 업데이트
       setUser({ ...user, avatar_url: publicUrl });
+
+      // 전역 사용자 상태 업데이트
+      await updateUserProfile({ avatar_url: publicUrl });
+
       setSuccess("프로필 이미지가 성공적으로 업데이트되었습니다.");
       setOpenSnackbar(true);
     } catch (error: any) {
       console.error("이미지 업로드 오류:", error.message);
       setError(error.message);
       setOpenSnackbar(true);
+      setAvatarPreview(null); // 오류 시 미리보기 초기화
     } finally {
       setUploadLoading(false);
     }
@@ -329,20 +376,21 @@ const Profile = () => {
         내 계정
       </Typography>
 
-      {/* 알림 스낵바 */}
+      {/* 알림 메시지 표시 방식 변경 */}
       <Snackbar
         open={openSnackbar}
         autoHideDuration={6000}
         onClose={handleCloseSnackbar}
-      >
-        <Alert
-          onClose={handleCloseSnackbar}
-          severity={error ? "error" : "success"}
-          sx={{ width: "100%" }}
-        >
-          {error || success}
-        </Alert>
-      </Snackbar>
+        message={error || success}
+        ContentProps={{
+          sx: {
+            background: error ? "#f44336" : "#4caf50",
+            color: "#fff",
+            fontWeight: "medium",
+            padding: "10px 16px",
+          },
+        }}
+      />
 
       {/* 프로필 사진 섹션 */}
       <Paper sx={{ p: 3, mb: 3 }}>
@@ -351,14 +399,16 @@ const Profile = () => {
         </Typography>
         <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
           <Avatar
-            src={user.avatar_url || undefined}
+            src={avatarPreview || user.avatar_url || undefined}
             sx={{ width: 100, height: 100, mr: 2 }}
           >
-            {!user.avatar_url && (user.email?.charAt(0).toUpperCase() || "U")}
+            {!avatarPreview &&
+              !user.avatar_url &&
+              (user.email?.charAt(0).toUpperCase() || "U")}
           </Avatar>
           <Box>
             <input
-              accept="image/*"
+              accept="image/jpeg,image/png,image/gif"
               style={{ display: "none" }}
               id="avatar-upload"
               type="file"

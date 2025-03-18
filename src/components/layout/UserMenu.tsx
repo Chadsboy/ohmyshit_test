@@ -15,9 +15,10 @@ interface UserMenuProps {
   settings?: string[];
   onLogout?: () => Promise<boolean>;
   userEmail?: string | null;
+  avatarUrl?: string | null;
 }
 
-export const UserMenu = ({ onLogout, userEmail }: UserMenuProps) => {
+export const UserMenu = ({ onLogout, userEmail, avatarUrl }: UserMenuProps) => {
   const [anchorElUser, setAnchorElUser] = useState<null | HTMLElement>(null);
   const navigate = useNavigate();
 
@@ -36,9 +37,9 @@ export const UserMenu = ({ onLogout, userEmail }: UserMenuProps) => {
     if (setting === "Profile") {
       navigate("/profile");
     } else if (setting === "Dashboard") {
-      navigate("/dashboard");
+      navigate("/statistics");
     } else if (setting === "Settings") {
-      // 설정 페이지 경로가 있으면 추가
+      navigate("/settings");
     }
   };
 
@@ -67,8 +68,12 @@ export const UserMenu = ({ onLogout, userEmail }: UserMenuProps) => {
             },
           }}
         >
-          <Avatar sx={{ bgcolor: "primary.main" }} alt={userEmail || "사용자"}>
-            {getInitials()}
+          <Avatar
+            sx={{ bgcolor: "primary.main" }}
+            alt={userEmail || "사용자"}
+            src={avatarUrl || undefined}
+          >
+            {!avatarUrl && getInitials()}
           </Avatar>
         </IconButton>
       </Tooltip>

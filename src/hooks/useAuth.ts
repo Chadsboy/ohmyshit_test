@@ -10,11 +10,13 @@ import {
   getCurrentUser,
   onAuthStateChange,
 } from "../services/auth";
+import { supabase } from "../lib/supabase";
 
 export interface User {
   id: string;
   email: string;
   name?: string;
+  avatar_url?: string;
   user_metadata?: {
     name?: string;
   };
@@ -36,7 +38,22 @@ export const useAuth = () => {
       if (session && session.session) {
         const userData = await getCurrentUser();
         if (userData) {
-          setUser(userData as unknown as User);
+          // Supabase에서 사용자 프로필 정보 가져오기
+          const { data: profileData, error: profileError } = await supabase
+            .from("users")
+            .select("avatar_url")
+            .eq("id", userData.id)
+            .single();
+
+          if (profileError) {
+            console.warn("프로필 정보 가져오기 실패:", profileError);
+          }
+
+          // 기본 사용자 데이터와 프로필 정보 병합
+          setUser({
+            ...(userData as unknown as User),
+            avatar_url: profileData?.avatar_url || undefined,
+          });
         } else {
           setUser(null);
         }
@@ -200,6 +217,39 @@ export const useAuth = () => {
     });
   };
 
+  // 프로필 정보 업데이트
+  const updateUserProfile = async (data: Partial<User>) => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      if (!user || !user.id) {
+        throw new Error("로그인된 사용자가 없습니다.");
+      }
+
+      // Supabase에 프로필 정보 업데이트
+      const { error: updateError } = await supabase
+        .from("users")
+        .update(data)
+        .eq("id", user.id);
+
+      if (updateError) {
+        throw updateError;
+      }
+
+      // 로컬 사용자 상태 업데이트
+      setUser((prev) => (prev ? { ...prev, ...data } : prev));
+
+      return true;
+    } catch (err) {
+      console.error("프로필 업데이트 오류:", err);
+      setError(err as Error);
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return {
     user,
     loading,
@@ -211,5 +261,6 @@ export const useAuth = () => {
     handleLogout,
     checkSession,
     loadUser,
+    updateUserProfile,
   };
 };

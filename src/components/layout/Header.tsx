@@ -23,6 +23,8 @@ export const Header = ({ title = "LOGO" }: HeaderProps) => {
 
   // 사용자 이메일 가져오기
   const userEmail = user?.email || null;
+  // 사용자 아바타 URL 가져오기
+  const avatarUrl = user?.avatar_url || null;
 
   return (
     <AppBar
@@ -104,6 +106,7 @@ export const Header = ({ title = "LOGO" }: HeaderProps) => {
             settings={settings}
             onLogout={handleLogout}
             userEmail={userEmail}
+            avatarUrl={avatarUrl}
           />
         </Box>
       </Toolbar>
