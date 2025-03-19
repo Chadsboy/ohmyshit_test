@@ -25,6 +25,7 @@ import Contact from "./pages/Contact";
 import Profile from "./pages/Profile";
 import Statistics from "./pages/Statistics";
 import Settings from "./pages/Settings";
+import Article from "./pages/Article";
 
 // 아이콘 및 컴포넌트 임포트
 import {
@@ -40,7 +41,7 @@ import { Layout } from "./components/layout/Layout";
 const NAV_HOME = "home";
 const NAV_EXPLORE = "explore";
 const NAV_FOODS = "foods";
-const NAV_CHAT = "chat";
+const NAV_ARTICLE = "article";
 const NAV_CALENDAR = "calendar";
 
 // 네비게이션 항목 정의
@@ -51,9 +52,9 @@ const navigationItems = [
     value: NAV_EXPLORE,
   },
   {
-    label: "채팅",
+    label: "읽을거리",
     icon: <Chat />,
-    value: NAV_CHAT,
+    value: NAV_ARTICLE,
   },
   {
     label: "홈",
@@ -81,8 +82,8 @@ const getPathFromNav = (nav: string): string => {
       return "/explore";
     case NAV_FOODS:
       return "/foods";
-    case NAV_CHAT:
-      return "/chat";
+    case NAV_ARTICLE:
+      return "/article";
     case NAV_CALENDAR:
       return "/calendar";
     case "shop":
@@ -109,8 +110,8 @@ const getNavFromPath = (path: string): string => {
       return NAV_EXPLORE;
     case "/foods":
       return NAV_FOODS;
-    case "/chat":
-      return NAV_CHAT;
+    case "/article":
+      return NAV_ARTICLE;
     case "/calendar":
       return NAV_CALENDAR;
     case "/shop":
@@ -176,6 +177,7 @@ const AuthenticatedRoutes = () => {
         <Route path="/" element={<Home />} />
         <Route path="/explore" element={<Explore />} />
         <Route path="/foods" element={<Foods />} />
+        <Route path="/article" element={<Article />} />
         <Route path="/calendar" element={<Calendar />} />
         <Route path="/shop" element={<Shop />} />
         <Route path="/manual" element={<Manual />} />
@@ -184,17 +186,6 @@ const AuthenticatedRoutes = () => {
         <Route path="/profile" element={<Profile />} />
         <Route path="/statistics" element={<Statistics />} />
         <Route path="/settings" element={<Settings />} />
-        <Route
-          path="/chat"
-          element={
-            <Box sx={{ p: 3, textAlign: "center" }}>
-              <Typography variant="h5">채팅 페이지</Typography>
-              <Typography variant="body1" color="text.secondary" sx={{ mt: 2 }}>
-                이 기능은 개발 중입니다.
-              </Typography>
-            </Box>
-          }
-        />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Layout>

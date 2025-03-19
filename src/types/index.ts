@@ -45,6 +45,18 @@ export interface CharacterProps {
   size?: "small" | "medium" | "large";
 }
 
+// Article 인터페이스 추가
+export interface Article {
+  id: number;
+  category: string;
+  title: string;
+  content: string;
+  date: string; // ISO 형식 문자열로 저장된 날짜
+  views: number;
+  created_at?: string;
+  updated_at?: string;
+}
+
 // 데이터베이스 타입 정의
 export interface Database {
   public: {
@@ -73,6 +85,38 @@ export interface Database {
           date?: string;
           created_at?: string;
           user_id?: string | null;
+        };
+      };
+      articles: {
+        Row: {
+          id: number;
+          category: string;
+          title: string;
+          content: string;
+          date: string;
+          views: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: number;
+          category: string;
+          title: string;
+          content: string;
+          date?: string;
+          views?: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: number;
+          category?: string;
+          title?: string;
+          content?: string;
+          date?: string;
+          views?: number;
+          created_at?: string;
+          updated_at?: string;
         };
       };
       bowel_records: {
