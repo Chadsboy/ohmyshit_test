@@ -65,12 +65,18 @@ export const getCurrentKoreanTime = (
 };
 
 /**
- * UTC 날짜를 한국 날짜로 변환합니다 (날짜만 변환).
- * @param utcDate UTC 날짜
+ * 핵심 날짜 변환 함수 - 앱 전체에서 일관되게 사용해야 함
+ * UTC 시간을 한국 날짜로 변환 (YYYY-MM-DD 형식)
+ * @param utcTime UTC 기준 시간 문자열
  * @returns 한국 날짜 (YYYY-MM-DD 형식)
  */
-export const getKoreanDate = (utcDate: string | Date): string => {
-  return dayjs.utc(utcDate).tz(KOREA_TIMEZONE).format("YYYY-MM-DD");
+export const getKoreanDate = (utcTime: string | Date): string => {
+  // 가장 안전한 접근법: Date 객체로 변환 후 9시간 더하기
+  const date = new Date(utcTime);
+  // UTC+9 시간으로 명시적 변환
+  const koreanDate = new Date(date.getTime() + 9 * 60 * 60 * 1000);
+  // ISO 문자열로 변환 후 날짜 부분만 추출 (YYYY-MM-DD)
+  return koreanDate.toISOString().split("T")[0];
 };
 
 /**
@@ -94,4 +100,13 @@ export const getTimezoneInfo = (): Record<string, any> => {
     currentKoreanTime: getCurrentKoreanTime(),
     currentUTCTime: dayjs().utc().format(),
   };
+};
+
+/**
+ * 배변 기록의 record_date 계산 함수 (표준화된 방식으로 일관되게 사용)
+ * @param startTime 배변 시작 시간 (UTC)
+ * @returns 한국 날짜 (YYYY-MM-DD)
+ */
+export const calculateRecordDate = (startTime: string | Date): string => {
+  return getKoreanDate(startTime);
 };

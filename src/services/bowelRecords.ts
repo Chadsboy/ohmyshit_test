@@ -1,6 +1,6 @@
 import { supabase } from "../lib/supabase";
 import { BowelRecord, ServiceResponse } from "../types";
-import { getKoreanDate } from "../utils/dateHelpers";
+import { calculateRecordDate } from "../utils/dateHelpers";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
@@ -20,25 +20,10 @@ export const createBowelRecord = async (
     // 타임존 처리: start_time을 한국 날짜로 변환하여 record_date로 설정
     console.log("[createBowelRecord] 원본 데이터:", data);
 
-    // 한국 로케일을 사용하여 날짜 변환
-    const startDate = new Date(data.start_time);
-    // 9시간(UTC+9) 추가
-    startDate.setHours(startDate.getHours() + 9);
-
-    // 한국 로케일로 날짜 형식 변환 (YYYY. MM. DD. 형식으로 반환)
-    const koDateStr = startDate.toLocaleDateString("ko-KR");
-
-    // YYYY-MM-DD 형식으로 변환
-    const dateParts = koDateStr.split(". ");
-    const koreanDate =
-      dateParts[0] +
-      "-" +
-      dateParts[1].padStart(2, "0") +
-      "-" +
-      dateParts[2].padStart(2, "0");
+    // 표준 함수를 사용하여 한국 날짜 계산
+    const koreanDate = calculateRecordDate(data.start_time);
 
     console.log(`[createBowelRecord] UTC 시작시간: ${data.start_time}`);
-    console.log(`[createBowelRecord] 한국 로케일 날짜: ${koDateStr}`);
     console.log(`[createBowelRecord] 변환된 한국 날짜: ${koreanDate}`);
 
     // day_index 계산을 위해 기존 레코드 조회

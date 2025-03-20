@@ -4,6 +4,7 @@ import { getCurrentUser } from "./auth";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
+import { calculateRecordDate } from "../utils/dateHelpers";
 import { getKoreanDate } from "../utils/dateHelpers";
 
 // dayjs 플러그인 설정
@@ -65,25 +66,10 @@ export class BowelRecordService {
       // 사용자가 선택한 날짜와 UTC 변환 후 한국 날짜 비교
       const userSelectedDate = date;
 
-      // 한국 로케일을 사용하여 날짜 변환
-      const startDate = new Date(startTimeIso);
-      // 9시간(UTC+9) 추가
-      startDate.setHours(startDate.getHours() + 9);
-
-      // 한국 로케일로 날짜 형식 변환 (YYYY. MM. DD. 형식으로 반환)
-      const koDateStr = startDate.toLocaleDateString("ko-KR");
-
-      // YYYY-MM-DD 형식으로 변환
-      const dateParts = koDateStr.split(". ");
-      const actualKoreanDate =
-        dateParts[0] +
-        "-" +
-        dateParts[1].padStart(2, "0") +
-        "-" +
-        dateParts[2].padStart(2, "0");
+      // 표준 함수를 사용하여 한국 날짜 계산
+      const actualKoreanDate = calculateRecordDate(startTimeIso);
 
       console.log("[BowelRecordService] 사용자 선택 날짜:", userSelectedDate);
-      console.log("[BowelRecordService] 한국 로케일 날짜:", koDateStr);
       console.log(
         "[BowelRecordService] 실제 시작 시간의 한국 날짜:",
         actualKoreanDate
