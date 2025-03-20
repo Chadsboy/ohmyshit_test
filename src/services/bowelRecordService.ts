@@ -64,7 +64,14 @@ export class BowelRecordService {
 
       // 사용자가 선택한 날짜와 UTC 변환 후 한국 날짜 비교
       const userSelectedDate = date;
-      const actualKoreanDate = getKoreanDate(startTimeIso);
+
+      // UTC+9 변환 방식으로 명시적 처리
+      const startDate = new Date(startTimeIso);
+      const actualKoreanDate = new Date(
+        startDate.getTime() + 9 * 60 * 60 * 1000
+      )
+        .toISOString()
+        .split("T")[0]; // YYYY-MM-DD 형식
 
       console.log("[BowelRecordService] 사용자 선택 날짜:", userSelectedDate);
       console.log(
@@ -300,10 +307,14 @@ export class BowelRecordService {
       const updateData: any = {};
 
       if (updates.date) {
+        // 날짜 업데이트 시 명시적으로 YYYY-MM-DD 형식 사용
         updateData.record_date = updates.date;
         console.log(
           `[BowelRecordService] 업데이트할 record_date: ${updates.date}`
         );
+
+        // 필요시 해당 날짜의 레코드를 가져와서 start_time의 시간 부분만 유지하고
+        // 날짜 부분은 사용자가 선택한 날짜로 업데이트하는 로직을 추가할 수 있습니다.
       }
 
       if (updates.memo !== undefined) {

@@ -20,12 +20,14 @@ export const createBowelRecord = async (
     // 타임존 처리: start_time을 한국 날짜로 변환하여 record_date로 설정
     console.log("[createBowelRecord] 원본 데이터:", data);
 
-    // start_time을 한국 날짜로 변환 (YYYY-MM-DD 형식)
-    const koreanDate = getKoreanDate(data.start_time);
-    console.log(
-      `[createBowelRecord] start_time(${data.start_time})의 한국 날짜:`,
-      koreanDate
-    );
+    // UTC+9 변환 방식으로 명시적 처리
+    const startDate = new Date(data.start_time);
+    const koreanDate = new Date(startDate.getTime() + 9 * 60 * 60 * 1000)
+      .toISOString()
+      .split("T")[0]; // YYYY-MM-DD 형식
+
+    console.log(`[createBowelRecord] UTC 시작시간: ${data.start_time}`);
+    console.log(`[createBowelRecord] 변환된 한국 날짜: ${koreanDate}`);
 
     // day_index 계산을 위해 기존 레코드 조회
     const { data: existingRecords, error: fetchError } = await supabase
