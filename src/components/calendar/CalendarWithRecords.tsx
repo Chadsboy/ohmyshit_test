@@ -125,31 +125,26 @@ const CalendarWithRecords: React.FC = () => {
   // 기록이 있는 날짜 목록 불러오기
   const loadRecordDates = async () => {
     try {
-      // 모든 기록을 불러오기 (record_date와 start_time 필드가 필요함)
+      // 모든 기록을 불러오기 (record_date 필드만 사용)
       const { data, error } = await supabase
         .from("bowel_records")
-        .select("record_date, start_time");
+        .select("record_date");
 
       if (error) throw error;
 
-      // 중복 제거하여 날짜 Set 생성 (한국 시간 기준으로 변환)
+      // 중복 제거하여 날짜 Set 생성
       const dateSet = new Set<string>();
-      data?.forEach((item: { record_date?: string; start_time: string }) => {
-        if (item.start_time) {
-          // start_time을 한국 시간으로 변환하여 날짜 추출
-          const koreanDate = dayjs
-            .utc(item.start_time)
-            .tz(KOREA_TIMEZONE)
-            .format("YYYY-MM-DD");
-
-          // 한국 시간 기준 날짜가 유효한지 확인
-          if (dayjs(koreanDate, "YYYY-MM-DD", true).isValid()) {
-            // 한국 시간 기준 날짜 추가
-            dateSet.add(koreanDate);
+      data?.forEach((item: { record_date: string }) => {
+        if (item.record_date) {
+          // record_date가 유효한지 확인
+          if (dayjs(item.record_date, "YYYY-MM-DD", true).isValid()) {
+            // 날짜 추가
+            dateSet.add(item.record_date);
           }
         }
       });
 
+      console.log("[CalendarWithRecords] 기록 있는 날짜:", Array.from(dateSet));
       setDatesWithRecords(dateSet);
     } catch (err) {
       console.error("[CalendarWithRecords] 기록 날짜 로딩 실패:", err);

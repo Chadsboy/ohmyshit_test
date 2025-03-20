@@ -179,32 +179,27 @@ export class BowelRecordService {
   }
 
   /**
-   * 특정 날짜의 배변 기록을 가져옵니다
+   * 특정 날짜의 배변 기록을 조회합니다
    * @param date 조회할 날짜 (YYYY-MM-DD)
    */
   static async getRecordsByDate(
     date: string
   ): Promise<ServiceResponse<BowelRecord[]>> {
     try {
-      // 한국 시간 기준으로 해당 날짜의 시작과 끝 시간을 UTC로 변환
-      const startOfDayUTC = dayjs
-        .tz(`${date}T00:00:00`, KOREA_TIMEZONE)
-        .utc()
-        .toISOString();
-      const endOfDayUTC = dayjs
-        .tz(`${date}T23:59:59`, KOREA_TIMEZONE)
-        .utc()
-        .toISOString();
+      console.log(`[BowelRecordService] ${date} 날짜 기록 조회 요청`);
 
-      // 시간 범위로 이벤트 조회 (한국 시간 기준으로 해당 날짜에 해당하는 UTC 시간 범위)
+      // record_date 필드를 사용하여 해당 날짜의 기록만 조회
       const { data, error } = await supabase
         .from("bowel_records")
         .select("*")
-        .gte("start_time", startOfDayUTC)
-        .lte("start_time", endOfDayUTC)
+        .eq("record_date", date)
         .order("start_time", { ascending: true });
 
       if (error) throw error;
+
+      console.log(
+        `[BowelRecordService] ${date} 날짜 기록 ${data?.length || 0}개 조회됨`
+      );
 
       // 조회 결과 반환
       return { data: data as BowelRecord[], error: null };
