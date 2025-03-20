@@ -21,6 +21,9 @@ import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
 import { CalendarEvent } from "../types";
 import { getCurrentKoreanTime } from "../utils/dateHelpers";
+import SaveButton from "./common/SaveButton";
+import CancelButton from "./common/CancelButton";
+import { useLoading } from "../contexts/LoadingContext";
 
 // dayjs에 플러그인 추가
 dayjs.extend(utc);
@@ -64,6 +67,10 @@ const EventForm: React.FC<EventFormProps> = ({
   const [time, setTime] = useState<string>(dayjs().format("HH:mm"));
   const [duration, setDuration] = useState<string>("5"); // 소요 시간 (분)
   const [memo, setMemo] = useState<string>("");
+
+  // 로컬 상태 대신 LoadingContext 사용
+  const { isSaving: isSubmittingGlobal, setSaving: setSubmittingGlobal } =
+    useLoading();
 
   // 초기 데이터가 변경될 때 폼 필드 업데이트
   useEffect(() => {
@@ -113,9 +120,11 @@ const EventForm: React.FC<EventFormProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setSubmittingGlobal(true);
 
     if (!date) {
       setError("날짜를 선택해주세요.");
+      setSubmittingGlobal(false);
       return;
     }
 
@@ -154,7 +163,6 @@ const EventForm: React.FC<EventFormProps> = ({
     }
 
     try {
-      setIsSubmitting(true);
       await onSubmit({
         title: generatedTitle,
         description: fullDescription,
@@ -163,7 +171,9 @@ const EventForm: React.FC<EventFormProps> = ({
       onClose();
     } catch (err) {
       setError((err as Error).message || "저장 중 오류가 발생했습니다.");
-      setIsSubmitting(false);
+    } finally {
+      // 전역 저장 상태 초기화
+      setTimeout(() => setSubmittingGlobal(false), 500);
     }
   };
 
@@ -295,12 +305,8 @@ const EventForm: React.FC<EventFormProps> = ({
           </Grid>
         </DialogContent>
         <DialogActions>
-          <Button onClick={onClose} color="inherit">
-            취소
-          </Button>
-          <Button type="submit" variant="contained" disabled={isSubmitting}>
-            {isSubmitting ? "저장 중..." : "저장"}
-          </Button>
+          <CancelButton onCancel={onClose} />
+          <SaveButton type="submit" isLoading={isSubmittingGlobal} />
         </DialogActions>
       </form>
     </Dialog>

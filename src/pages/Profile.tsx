@@ -24,6 +24,7 @@ import {
 import { PhotoCamera } from "@mui/icons-material";
 import { supabase } from "../lib/supabase";
 import { useAuth } from "../hooks/useAuth";
+import SaveButton from "../components/common/SaveButton";
 
 interface UserData {
   email: string | null;
@@ -515,15 +516,12 @@ const Profile = () => {
           </Grid>
 
           <Grid item xs={12}>
-            <Button
-              variant="contained"
-              color="primary"
+            <SaveButton
               onClick={handleSaveProfile}
-              disabled={saveLoading}
+              isLoading={saveLoading}
+              saveType="info"
               sx={{ mt: 2 }}
-            >
-              {saveLoading ? "저장 중..." : "정보 저장"}
-            </Button>
+            />
           </Grid>
         </Grid>
       </Paper>

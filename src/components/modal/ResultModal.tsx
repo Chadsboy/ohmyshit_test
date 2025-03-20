@@ -18,6 +18,8 @@ import {
   CircularProgress,
 } from "@mui/material";
 import { CheckCircle, Cancel, SaveAlt } from "@mui/icons-material";
+import SaveButton from "../common/SaveButton";
+import { useLoading } from "../../contexts/LoadingContext";
 
 // 배변량 타입
 type StoolAmount = "많음" | "보통" | "적음" | "이상" | "";
@@ -35,13 +37,14 @@ const ResultModal: React.FC<ResultModalProps> = ({
   onClose,
   onSuccess,
   onFail,
-  isSaving = false, // 기본값은 false
+  isSaving: propIsSaving = false, // 기존 prop은 남겨두되 이름 변경
 }) => {
   const [showSuccessDetails, setShowSuccessDetails] = useState<boolean>(false);
   const [stoolAmount, setStoolAmount] = useState<StoolAmount>("");
   const [memo, setMemo] = useState<string>("");
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+  const { isSaving, setSaving } = useLoading(); // 전역 저장 상태 사용
 
   // 성공/실패 처리
   const handleResult = (success: boolean) => {
@@ -56,11 +59,21 @@ const ResultModal: React.FC<ResultModalProps> = ({
 
   // 상세 정보 저장
   const handleSaveDetails = () => {
-    // 성공 콜백 호출
-    onSuccess(stoolAmount, memo);
+    // 저장 시작
+    setSaving(true);
 
-    // 폼 초기화
-    resetForm();
+    try {
+      // 성공 콜백 호출
+      onSuccess(stoolAmount, memo);
+    } catch (error) {
+      console.error("저장 중 오류 발생:", error);
+    } finally {
+      // 저장 상태 초기화
+      setTimeout(() => setSaving(false), 500);
+
+      // 폼 초기화
+      resetForm();
+    }
   };
 
   // 폼 초기화 및 모달 닫기
@@ -85,7 +98,9 @@ const ResultModal: React.FC<ResultModalProps> = ({
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
+        overflow: "hidden",
       }}
+      disableScrollLock={false}
     >
       <Zoom in={open}>
         <Paper
@@ -245,20 +260,11 @@ const ResultModal: React.FC<ResultModalProps> = ({
                 sx={{ mb: 3 }}
               />
 
-              <Button
-                variant="contained"
-                color="primary"
-                startIcon={
-                  isSaving ? (
-                    <CircularProgress size={20} color="inherit" />
-                  ) : (
-                    <SaveAlt />
-                  )
-                }
+              <SaveButton
                 onClick={handleSaveDetails}
-                size="large"
+                isLoading={isSaving}
+                disabled={!stoolAmount || isSaving}
                 fullWidth
-                disabled={!stoolAmount || isSaving} // 저장 중일 때도 비활성화
                 sx={{
                   py: 1.5,
                   borderRadius: 2,
@@ -270,9 +276,7 @@ const ResultModal: React.FC<ResultModalProps> = ({
                     transform: "translateY(-2px)",
                   },
                 }}
-              >
-                {isSaving ? "저장 중..." : "저장"}
-              </Button>
+              />
             </>
           )}
         </Paper>

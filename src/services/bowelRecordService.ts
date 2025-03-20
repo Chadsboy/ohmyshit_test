@@ -52,15 +52,17 @@ export class BowelRecordService {
         koreaDateTime.format()
       );
 
-      // UTC 시간으로 변환 (데이터베이스 저장용)
-      const utcDateTime = koreaDateTime.utc();
-      console.log("[BowelRecordService] UTC 시간 객체:", utcDateTime.format());
+      // 중요: 한국 시간을 그대로 저장하되, ISO 문자열로 변환
+      // 이전 문제: UTC 변환으로 -9시간 적용되어 시간이 틀림
+      const startTimeIso = koreaDateTime.toISOString();
+      console.log("[BowelRecordService] 저장할 ISO 시간:", startTimeIso);
+      console.log(
+        "[BowelRecordService] 변환 확인:",
+        dayjs(startTimeIso).tz(KOREA_TIMEZONE).format()
+      );
 
       // 종료 시간 계산 (duration 분 후)
-      const endDateTime = utcDateTime.add(duration, "minute");
-
-      // ISO 문자열로 변환
-      const startTimeIso = utcDateTime.toISOString();
+      const endDateTime = koreaDateTime.add(duration, "minute");
       const endTimeIso = endDateTime.toISOString();
 
       // ===== 날짜 처리 로직 개선 =====

@@ -42,14 +42,9 @@ const Calendar = () => {
       // 선택한 날짜의 이벤트 가져오기
       const eventsOnDate = await getEventsByDate(formattedDate);
 
-      // 이벤트가 있는 경우에만 모달 열기
-      if (eventsOnDate.length > 0) {
-        setSelectedEvents(eventsOnDate);
-        setModalOpen(true);
-      } else {
-        // 이벤트가 없는 경우 바로 이벤트 추가 폼 열기 (선택적)
-        // setFormOpen(true);
-      }
+      // 모든 경우에 이벤트 설정 및 모달 열기
+      setSelectedEvents(eventsOnDate);
+      setModalOpen(true);
     } catch (err) {
       console.error("이벤트를 가져오는 중 오류 발생:", err);
     }
@@ -83,8 +78,16 @@ const Calendar = () => {
         if (error) {
           throw error;
         }
-        // 모달 닫기
-        setModalOpen(false);
+
+        // 이벤트 삭제 후 현재 선택된 날짜의 이벤트를 다시 불러오기
+        if (selectedDate) {
+          const formattedDate = selectedDate.format("YYYY-MM-DD");
+          const eventsOnDate = await getEventsByDate(formattedDate);
+          setSelectedEvents(eventsOnDate);
+
+          // 모달을 닫지 않고 유지 (이 라인 제거)
+          // setModalOpen(false);
+        }
       } catch (err) {
         console.error("이벤트 삭제 중 오류 발생:", err);
         alert("이벤트를 삭제하는 중 오류가 발생했습니다.");

@@ -83,7 +83,9 @@ const ContentModal: React.FC<ContentModalProps> = ({ open, onClose }) => {
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
+        overflow: "hidden",
       }}
+      disableScrollLock={false}
     >
       <Zoom in={open}>
         <Paper

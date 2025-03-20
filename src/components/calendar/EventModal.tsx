@@ -58,25 +58,42 @@ const EventModal: React.FC<EventModalProps> = ({
     }
   }, [selectedDate]);
 
+  // 이벤트를 날짜/시간 기준 오름차순으로 정렬
+  const sortedEvents = React.useMemo(() => {
+    if (!selectedEvents?.length) return [];
+
+    return [...selectedEvents].sort((a, b) => {
+      // 날짜 정보 가져오기 (일정 제목에서 시간 추출하기)
+      const getTimeFromTitle = (title: string) => {
+        // 배변 성공/실패 (HH:MM) 형식에서 시간 추출
+        const timeMatch = title.match(/\((\d{2}:\d{2})\)/);
+        return timeMatch ? timeMatch[1] : "00:00";
+      };
+
+      const timeA = getTimeFromTitle(a.title);
+      const timeB = getTimeFromTitle(b.title);
+
+      console.log(`정렬: ${a.title} (${timeA}) vs ${b.title} (${timeB})`);
+
+      // 시간 기준 오름차순 정렬
+      return timeA.localeCompare(timeB);
+    });
+  }, [selectedEvents]);
+
   // 개별 이벤트 삭제 처리 함수
   const handleDeleteEvent = useCallback(
     async (eventId: string) => {
       setIsLocalDeleting(true);
       try {
         await onDeleteEvent(eventId);
-
-        // 모든 이벤트가 삭제되었는지 확인
-        if (selectedEvents.length <= 1) {
-          // 마지막 이벤트였다면 모달 닫기
-          onClose();
-        }
+        // 모달을 닫지 않고 유지합니다 (기존 코드 제거)
       } catch (error) {
         console.error("이벤트 삭제 중 오류 발생:", error);
       } finally {
         setIsLocalDeleting(false);
       }
     },
-    [onDeleteEvent, selectedEvents.length, onClose]
+    [onDeleteEvent]
   );
 
   return (
@@ -132,9 +149,23 @@ const EventModal: React.FC<EventModalProps> = ({
           >
             <CircularProgress />
           </Box>
+        ) : sortedEvents.length === 0 ? (
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              p: 4,
+              height: "100px",
+            }}
+          >
+            <Typography color="text.secondary">
+              해당 날짜의 기록이 없습니다.
+            </Typography>
+          </Box>
         ) : (
           <EventList
-            events={selectedEvents || []}
+            events={sortedEvents}
             onEdit={onEditEvent}
             onDelete={handleDeleteEvent}
             disabled={isActuallyDeleting}

@@ -20,11 +20,7 @@ import {
   Card,
   CardContent,
   Divider,
-  CircularProgress,
-  Alert,
 } from "@mui/material";
-import { articleService } from "../services/articleService";
-import { Article as ArticleType } from "../types";
 
 // 테이블 열 정의
 interface Column {
@@ -67,7 +63,7 @@ const columns: readonly Column[] = [
     label: "등록날짜",
     minWidth: 120,
     align: "center",
-    format: (value: string) => new Date(value).toLocaleDateString("ko-KR"),
+    format: (value: Date) => value.toLocaleDateString("ko-KR"),
     hideOnMobile: true,
   },
   {
@@ -80,6 +76,128 @@ const columns: readonly Column[] = [
   },
 ];
 
+// 데이터 타입 정의
+interface ArticleData {
+  id: number;
+  category: string;
+  title: string;
+  date: Date;
+  views: number;
+  content: string;
+}
+
+// 샘플 데이터 생성 함수
+function createData(
+  id: number,
+  category: string,
+  title: string,
+  date: Date,
+  views: number,
+  content: string
+): ArticleData {
+  return { id, category, title, date, views, content };
+}
+
+// 샘플 데이터
+const sampleRows: ArticleData[] = [
+  createData(
+    1,
+    "영양",
+    "건강한 식습관의 중요성",
+    new Date(2023, 4, 15),
+    1245,
+    "건강한 식습관은 전반적인 웰빙에 필수적입니다. 균형 잡힌 식단은 신체에 필요한 영양소를 제공하고 만성 질환의 위험을 줄이는 데 도움이 됩니다. 규칙적인 식사 시간, 다양한 과일과 채소 섭취, 가공식품 제한 등이 건강한 식습관의 핵심 요소입니다."
+  ),
+  createData(
+    2,
+    "운동",
+    "일상에서 쉽게 할 수 있는 운동",
+    new Date(2023, 5, 2),
+    986,
+    "바쁜 일상 속에서도 건강을 유지하기 위한 간단한 운동 방법을 소개합니다. 출퇴근 시 한 정거장 일찍 내려 걷기, 엘리베이터 대신 계단 이용하기, 점심시간에 짧은 산책하기 등 일상 속에서 쉽게 실천할 수 있는 운동 팁을 알아봅시다."
+  ),
+  createData(
+    3,
+    "정신건강",
+    "스트레스 관리 기법",
+    new Date(2023, 6, 10),
+    1502,
+    "현대 사회에서 스트레스는 피할 수 없는 요소입니다. 하지만 효과적인 스트레스 관리 기법을 통해 정신 건강을 유지할 수 있습니다. 명상, 심호흡, 취미 활동, 충분한 휴식 등 다양한 스트레스 해소 방법을 알아봅시다."
+  ),
+  createData(
+    4,
+    "수면",
+    "질 좋은 수면을 위한 팁",
+    new Date(2023, 7, 5),
+    1105,
+    "수면은 신체와 정신의 회복에 필수적인 요소입니다. 규칙적인 수면 시간, 수면 환경 최적화, 취침 전 전자기기 사용 제한, 카페인 섭취 조절 등 더 나은 수면을 위한 다양한 방법을 소개합니다."
+  ),
+  createData(
+    5,
+    "영양",
+    "면역력 강화를 위한 식품",
+    new Date(2023, 8, 20),
+    1320,
+    "면역 체계를 강화하는 데 도움이 되는 다양한 식품에 대해 알아봅니다. 비타민 C가 풍부한 과일, 항산화물질이 풍부한 채소, 건강한 지방이 포함된 견과류 등 면역력 증진에 도움이 되는 식품을 소개합니다."
+  ),
+  createData(
+    6,
+    "운동",
+    "심폐 건강을 위한 유산소 운동",
+    new Date(2023, 9, 8),
+    950,
+    "심장과 폐 건강을 증진시키는 다양한 유산소 운동에 대해 알아봅니다. 걷기, 조깅, 수영, 사이클링 등 심폐 건강에 좋은 운동과 그 효과, 그리고 안전하게 운동하는 방법을 소개합니다."
+  ),
+  createData(
+    7,
+    "정신건강",
+    "마음챙김 명상의 효과",
+    new Date(2023, 10, 15),
+    1450,
+    "마음챙김 명상은 현재 순간에 집중하는 기술로, 스트레스 감소와 정신 건강 증진에 효과적입니다. 간단한 마음챙김 명상 방법과 일상에서 마음챙김을 실천하는 방법, 그리고 그 효과에 대해 알아봅니다."
+  ),
+  createData(
+    8,
+    "건강검진",
+    "정기 건강검진의 중요성",
+    new Date(2023, 11, 3),
+    1287,
+    "정기적인 건강검진은 질병의 조기 발견과 예방에 중요합니다. 연령별, 성별에 따라 권장되는 건강검진 항목과 주기, 그리고 건강검진 결과를 올바르게 해석하는 방법에 대해 알아봅니다."
+  ),
+  createData(
+    9,
+    "수면",
+    "불면증 극복 방법",
+    new Date(2024, 0, 12),
+    1156,
+    "불면증은 현대인의 흔한 수면 장애 중 하나입니다. 불면증의 원인, 증상, 그리고 약물에 의존하지 않고 불면증을 극복할 수 있는 다양한 방법에 대해 알아봅니다."
+  ),
+  createData(
+    10,
+    "영양",
+    "건강한 간식 선택하기",
+    new Date(2024, 1, 28),
+    892,
+    "간식은 하루 중 에너지를 보충하는 중요한 역할을 합니다. 하지만 잘못된 간식 선택은 건강에 해로울 수 있습니다. 영양가 있고 건강한 간식 옵션과 현명한 간식 선택 방법에 대해 알아봅니다."
+  ),
+  createData(
+    11,
+    "운동",
+    "근력 운동의 중요성",
+    new Date(2024, 2, 17),
+    1098,
+    "근력 운동은 나이가 들수록 더욱 중요해집니다. 근육량 유지, 기초 대사량 증가, 골밀도 향상 등 근력 운동의 다양한 이점과 초보자도 쉽게 시작할 수 있는 근력 운동 방법을 소개합니다."
+  ),
+  createData(
+    12,
+    "정신건강",
+    "디지털 디톡스의 필요성",
+    new Date(2024, 3, 5),
+    1342,
+    "현대인은 디지털 기기에 과도하게 의존하는 경향이 있습니다. 이로 인한 정신적, 신체적 영향과 디지털 기기 사용을 줄이고 현실 세계와의 연결을 강화하는 디지털 디톡스 방법에 대해 알아봅니다."
+  ),
+];
+
 const Article: React.FC = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
@@ -87,42 +205,12 @@ const Article: React.FC = () => {
   // 상태 관리
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
-  const [orderBy, setOrderBy] = useState<keyof ArticleType>("id");
+  const [orderBy, setOrderBy] = useState<keyof ArticleData>("id");
   const [order, setOrder] = useState<"asc" | "desc">("desc");
-  const [selectedArticle, setSelectedArticle] = useState<ArticleType | null>(
+  const [selectedArticle, setSelectedArticle] = useState<ArticleData | null>(
     null
   );
   const [open, setOpen] = useState(false);
-  const [articles, setArticles] = useState<ArticleType[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  // 데이터 로드
-  useEffect(() => {
-    const loadArticles = async () => {
-      try {
-        setLoading(true);
-        const { data, error } = await articleService.getAllArticles();
-
-        if (error) {
-          throw error;
-        }
-
-        if (data) {
-          setArticles(data);
-        } else {
-          setArticles([]);
-        }
-      } catch (err) {
-        console.error("게시글을 불러오는 중 오류가 발생했습니다:", err);
-        setError("게시글을 불러오는 중 오류가 발생했습니다");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadArticles();
-  }, []);
 
   // 정렬 함수
   function descendingComparator<T>(a: T, b: T, orderBy: keyof T) {
@@ -135,11 +223,13 @@ const Article: React.FC = () => {
     return 0;
   }
 
-  // 문자열, 숫자, 날짜 모두 지원하는 비교 함수 생성
-  function getComparator(
+  function getComparator<Key extends keyof any>(
     order: "asc" | "desc",
-    orderBy: keyof ArticleType
-  ): (a: ArticleType, b: ArticleType) => number {
+    orderBy: Key
+  ): (
+    a: { [key in Key]: number | string | Date },
+    b: { [key in Key]: number | string | Date }
+  ) => number {
     return order === "desc"
       ? (a, b) => descendingComparator(a, b, orderBy)
       : (a, b) => -descendingComparator(a, b, orderBy);
@@ -162,7 +252,7 @@ const Article: React.FC = () => {
   }
 
   // 정렬 핸들러
-  const handleRequestSort = (property: keyof ArticleType) => {
+  const handleRequestSort = (property: keyof ArticleData) => {
     const isAsc = orderBy === property && order === "asc";
     setOrder(isAsc ? "desc" : "asc");
     setOrderBy(property);
@@ -182,75 +272,40 @@ const Article: React.FC = () => {
   };
 
   // 모달 열기/닫기 핸들러
-  const handleOpen = async (article: ArticleType) => {
-    try {
-      // 상세 정보를 위해 API 호출 (조회수 증가 포함)
-      const { data, error } = await articleService.getArticleById(article.id);
-
-      if (error) {
-        throw error;
-      }
-
-      if (data) {
-        setSelectedArticle(data);
-        // 로컬 상태에도 조회수 업데이트 반영
-        setArticles((prev) =>
-          prev.map((a) => (a.id === data.id ? { ...a, views: data.views } : a))
-        );
-      } else {
-        setSelectedArticle(article);
-      }
-
-      setOpen(true);
-    } catch (err) {
-      console.error("게시글 상세 정보를 불러오는 중 오류가 발생했습니다:", err);
-      // 에러가 발생해도 모달은 열지만 상세 정보 조회에 실패했다는 메시지 표시 가능
-      setSelectedArticle(article);
-      setOpen(true);
-    }
+  const handleOpen = (article: ArticleData) => {
+    setSelectedArticle(article);
+    setOpen(true);
   };
 
   const handleClose = () => {
     setOpen(false);
   };
 
-  // 로딩 중일 때 표시할 컴포넌트
-  if (loading) {
-    return (
-      <Box
-        sx={{
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-          minHeight: "60vh",
-        }}
-      >
-        <CircularProgress />
-      </Box>
-    );
-  }
-
-  // 에러가 있을 때 표시할 컴포넌트
-  if (error) {
-    return (
-      <Box
-        sx={{
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-          minHeight: "60vh",
-        }}
-      >
-        <Alert severity="error">{error}</Alert>
-      </Box>
-    );
-  }
-
   return (
     <Container
       maxWidth="lg"
       sx={{ mt: isMobile ? 2 : 3, mb: isMobile ? 4 : 5, px: isMobile ? 1 : 2 }}
     >
+      <Box sx={{ mb: isMobile ? 2 : 4 }}>
+        <Typography
+          variant={isMobile ? "h5" : "h4"}
+          component="h1"
+          gutterBottom
+          align="center"
+          sx={{ fontWeight: 600, fontSize: isMobile ? "1.5rem" : undefined }}
+        >
+          Oh My Hea!th Articles
+        </Typography>
+        <Typography
+          variant="body1"
+          color="text.secondary"
+          align="center"
+          sx={{ mb: isMobile ? 2 : 3 }}
+        >
+          건강을 위한 유익한 읽을거리
+        </Typography>
+      </Box>
+
       <Box sx={{ textAlign: "center" }}>
         <Typography
           variant="h5"
@@ -331,76 +386,61 @@ const Article: React.FC = () => {
               </TableRow>
             </TableHead>
             <TableBody>
-              {articles.length === 0 ? (
-                <TableRow>
-                  <TableCell
-                    colSpan={
-                      columns.filter((col) => !isMobile || !col.hideOnMobile)
-                        .length
-                    }
-                    align="center"
-                  >
-                    게시글이 없습니다
-                  </TableCell>
-                </TableRow>
-              ) : (
-                stableSort<ArticleType>(articles, getComparator(order, orderBy))
-                  .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-                  .map((article) => {
-                    return (
-                      <TableRow
-                        hover
-                        role="checkbox"
-                        tabIndex={-1}
-                        key={String(article.id)}
-                        onClick={() => handleOpen(article)}
-                        sx={{
-                          cursor: "pointer",
-                          height: isMobile ? "50px" : "64px",
-                        }}
-                      >
-                        {columns.map((column) => {
-                          const value = article[column.id];
-                          return !isMobile || !column.hideOnMobile ? (
-                            <TableCell
-                              key={column.id}
-                              align={column.align}
-                              sx={{
-                                padding: isMobile ? "8px 4px" : undefined,
-                                fontSize: isMobile ? "0.7rem" : undefined,
-                                width:
-                                  isMobile && column.mobileWidth
-                                    ? column.mobileWidth
-                                    : undefined,
-                                ...(column.id === "title" && {
-                                  maxWidth: isMobile ? "190px" : "320px",
-                                  whiteSpace: "nowrap",
-                                  overflow: "hidden",
-                                  textOverflow: "ellipsis",
-                                }),
-                              }}
-                            >
-                              {column.format &&
-                              (typeof value === "number" ||
-                                typeof value === "string")
-                                ? column.format(value)
-                                : typeof value === "string"
-                                ? value
-                                : String(value)}
-                            </TableCell>
-                          ) : null;
-                        })}
-                      </TableRow>
-                    );
-                  })
-              )}
+              {stableSort(sampleRows, getComparator(order, orderBy))
+                .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+                .map((row) => {
+                  return (
+                    <TableRow
+                      hover
+                      role="checkbox"
+                      tabIndex={-1}
+                      key={row.id}
+                      onClick={() => handleOpen(row)}
+                      sx={{
+                        cursor: "pointer",
+                        height: isMobile ? "50px" : "64px",
+                      }}
+                    >
+                      {columns.map((column) => {
+                        const value = row[column.id];
+                        return !isMobile || !column.hideOnMobile ? (
+                          <TableCell
+                            key={column.id}
+                            align={column.align}
+                            sx={{
+                              padding: isMobile ? "8px 4px" : undefined,
+                              fontSize: isMobile ? "0.7rem" : undefined,
+                              width:
+                                isMobile && column.mobileWidth
+                                  ? column.mobileWidth
+                                  : undefined,
+                              ...(column.id === "title" && {
+                                maxWidth: isMobile ? "190px" : "320px",
+                                whiteSpace: "nowrap",
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                              }),
+                            }}
+                          >
+                            {column.format &&
+                            (typeof value === "number" || value instanceof Date)
+                              ? column.format(value)
+                              : typeof value === "string"
+                              ? value
+                              : String(value)}
+                          </TableCell>
+                        ) : null;
+                      })}
+                    </TableRow>
+                  );
+                })}
             </TableBody>
           </Table>
         </TableContainer>
         <TablePagination
           rowsPerPageOptions={isMobile ? [5, 10] : [5, 10, 25]}
           component="div"
-          count={articles.length}
+          count={sampleRows.length}
           rowsPerPage={rowsPerPage}
           page={page}
           onPageChange={handleChangePage}
@@ -433,8 +473,6 @@ const Article: React.FC = () => {
         open={open}
         onClose={handleClose}
         closeAfterTransition
-        disableScrollLock={false}
-        sx={{ overflow: "hidden" }}
         slots={{ backdrop: Backdrop }}
         slotProps={{
           backdrop: {
@@ -491,10 +529,8 @@ const Article: React.FC = () => {
                       color="text.secondary"
                       sx={{ fontSize: isMobile ? "0.75rem" : undefined }}
                     >
-                      {new Date(selectedArticle.date).toLocaleDateString(
-                        "ko-KR"
-                      )}{" "}
-                      | 조회 {selectedArticle.views.toLocaleString("ko-KR")}
+                      {selectedArticle.date.toLocaleDateString("ko-KR")} | 조회{" "}
+                      {selectedArticle.views.toLocaleString("ko-KR")}
                     </Typography>
                   </Box>
                   <Divider sx={{ mb: 2 }} />

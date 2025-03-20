@@ -71,18 +71,37 @@ export const getCurrentKoreanTime = (
  * @returns 한국 날짜 (YYYY-MM-DD 형식)
  */
 export const getKoreanDate = (utcTime: string | Date): string => {
-  // dayjs timezone 플러그인 사용하여 더 정확하게 변환
-  // UTC 시간을 명시적으로 파싱하고 한국 시간대로 변환한 후 날짜 형식만 추출
+  // 시간대 변환 문제 해결을 위한 접근법
   try {
-    return dayjs.utc(utcTime).tz(KOREA_TIMEZONE).format("YYYY-MM-DD");
+    // 1. 입력값이 Date 객체인 경우 ISO 문자열로 변환
+    const isoString = utcTime instanceof Date ? utcTime.toISOString() : utcTime;
+
+    // 2. 디버깅을 위한 로그
+    console.log("[getKoreanDate] 입력된 시간:", isoString);
+    const parsedInUTC = dayjs.utc(isoString);
+    console.log("[getKoreanDate] UTC로 파싱:", parsedInUTC.format());
+
+    // 3. UTC 시간을 한국 시간으로 변환
+    const koreanDateTime = parsedInUTC.tz(KOREA_TIMEZONE);
+    console.log("[getKoreanDate] 한국 시간으로 변환:", koreanDateTime.format());
+
+    // 4. YYYY-MM-DD 형식으로 반환
+    const result = koreanDateTime.format("YYYY-MM-DD");
+    console.log("[getKoreanDate] 최종 날짜:", result);
+
+    return result;
   } catch (error) {
     console.error("[getKoreanDate] 날짜 변환 오류:", error);
     console.error("[getKoreanDate] 입력값:", utcTime);
+
     // 오류가 발생하면 기존 방식으로 변환 시도 (fallback)
     try {
       const date = new Date(utcTime);
+      // 한국은 UTC+9이므로 9시간 더함
       const koreanDate = new Date(date.getTime() + 9 * 60 * 60 * 1000);
-      return koreanDate.toISOString().split("T")[0];
+      const result = koreanDate.toISOString().split("T")[0];
+      console.log("[getKoreanDate] 대체 방식으로 계산된 날짜:", result);
+      return result;
     } catch (fallbackError) {
       console.error("[getKoreanDate] 대체 방식도 실패:", fallbackError);
       // 최종 fallback - 현재 날짜 반환

@@ -77,6 +77,8 @@ const CalendarWithRecords: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState<Dayjs>(dayjs());
   const [formattedDate, setFormattedDate] = useState<string>("");
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [isFormLoading, setIsFormLoading] = useState(false); // 폼 로딩 상태
+  const [formKey, setFormKey] = useState(Date.now()); // 폼 강제 리마운트용 키
   const [records, setRecords] = useState<BowelRecord[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -93,12 +95,44 @@ const CalendarWithRecords: React.FC = () => {
 
   // 폼 열기 핸들러
   const handleOpenForm = () => {
+    // 이미 열려있다면 닫고 다시 열기 (강제 리셋)
+    if (isFormOpen) {
+      console.log("[CalendarWithRecords] 폼이 이미 열려있어 재초기화");
+      setIsFormOpen(false);
+      setIsFormLoading(false);
+
+      // 약간의 지연 후 다시 열기
+      setTimeout(() => {
+        setFormKey(Date.now());
+        setIsFormOpen(true);
+      }, 50);
+      return;
+    }
+
+    // 새로운 키 생성으로 강제 리마운트
+    setFormKey(Date.now());
+    // 로딩 상태 초기화
+    setIsFormLoading(false);
+    console.log("[CalendarWithRecords] 폼 열기 - 새 키:", formKey);
+    // 폼 열기
     setIsFormOpen(true);
   };
 
   // 폼 닫기 핸들러
   const handleCloseForm = () => {
+    // 먼저 로딩 상태 초기화
+    console.log("[CalendarWithRecords] 폼 닫기 - 로딩 상태 초기화");
+    setIsFormLoading(false);
+
+    // 그 다음 폼 닫기
+    console.log("[CalendarWithRecords] 폼 닫기 - 폼 상태 false로 설정");
     setIsFormOpen(false);
+  };
+
+  // 폼 로딩 상태 핸들러
+  const handleFormLoadingChange = (loading: boolean) => {
+    console.log("[CalendarWithRecords] 폼 로딩 상태 변경:", loading);
+    setIsFormLoading(loading);
   };
 
   // 기록 불러오기
@@ -113,7 +147,15 @@ const CalendarWithRecords: React.FC = () => {
         throw response.error;
       }
 
-      setRecords(response.data || []);
+      // 기록을 시간순으로 정렬 (오름차순)
+      const sortedRecords = (response.data || []).sort((a, b) => {
+        return a.start_time.localeCompare(b.start_time);
+      });
+
+      console.log(
+        `[CalendarWithRecords] ${date} 날짜 기록 ${sortedRecords.length}개 로드됨`
+      );
+      setRecords(sortedRecords);
     } catch (err) {
       setError((err as Error).message || "기록을 불러오는 데 실패했습니다.");
       setRecords([]);
@@ -192,6 +234,8 @@ const CalendarWithRecords: React.FC = () => {
     loadRecords(formattedDate);
     // 날짜 목록 다시 불러오기
     loadRecordDates();
+    // 폼 로딩 상태 초기화
+    setIsFormLoading(false);
   };
 
   // 선택한 날짜가 변경될 때 해당 날짜의 기록 불러오기
@@ -305,13 +349,18 @@ const CalendarWithRecords: React.FC = () => {
         )}
       </RecordsList>
 
-      {/* 새 기록 추가 폼 */}
-      <BowelRecordForm
-        open={isFormOpen}
-        onClose={handleCloseForm}
-        selectedDate={formattedDate}
-        onSuccess={handleSaveSuccess}
-      />
+      {/* 배변 기록 추가 폼 */}
+      {isFormOpen ? (
+        <BowelRecordForm
+          key={`bowel-form-${formKey}-${Math.random()}`}
+          open={true}
+          onClose={handleCloseForm}
+          selectedDate={formattedDate}
+          onSuccess={handleSaveSuccess}
+          isLoading={isFormLoading}
+          onLoadingChange={handleFormLoadingChange}
+        />
+      ) : null}
     </CalendarContainer>
   );
 };

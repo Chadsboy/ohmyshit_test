@@ -10,6 +10,7 @@ import { useState, useEffect } from "react";
 import { Box, CircularProgress, Typography } from "@mui/material";
 import { supabase } from "./lib/supabase";
 import { CssBaseline } from "@mui/material";
+import { LoadingProvider, useLoading } from "./contexts/LoadingContext";
 
 // 페이지 임포트
 import Home from "./pages/Home";
@@ -203,14 +204,16 @@ const UnauthenticatedRoutes = () => {
   );
 };
 
-function App() {
+const AppContent = () => {
   const [session, setSession] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
     // 초기 로딩 시 로컬 스토리지에서 인증 상태 확인
     return localStorage.getItem("isAuthenticated") === "true";
   });
+
+  const { resetAllLoadingStates } = useLoading();
 
   // 세션 상태 확인
   useEffect(() => {
@@ -221,7 +224,13 @@ function App() {
     const timeoutId = setTimeout(() => {
       if (isMounted && loading) {
         console.log("세션 확인 타임아웃 - 로딩 종료");
+
+        // 글로벌 로딩 상태 초기화
         setLoading(false);
+
+        // 모든 컴포넌트의 로딩 상태 초기화
+        resetAllLoadingStates();
+        console.log("세션 확인 타임아웃 - 모든 컴포넌트의 로딩 상태 초기화됨");
       }
     }, 10000);
 
@@ -297,7 +306,7 @@ function App() {
         clearTimeout(authChangeTimerId);
       }
     };
-  }, [isAuthenticated]);
+  }, [isAuthenticated, resetAllLoadingStates]);
 
   const handleLogout = async () => {
     try {
@@ -363,9 +372,19 @@ function App() {
   }
 
   return (
-    <Router>
+    <>
       <CssBaseline />
       {isAuthenticated ? <AuthenticatedRoutes /> : <UnauthenticatedRoutes />}
+    </>
+  );
+};
+
+function App() {
+  return (
+    <Router>
+      <LoadingProvider>
+        <AppContent />
+      </LoadingProvider>
     </Router>
   );
 }
