@@ -125,27 +125,62 @@ const CalendarWithRecords: React.FC = () => {
   // 기록이 있는 날짜 목록 불러오기
   const loadRecordDates = async () => {
     try {
+      console.log("[CalendarWithRecords] 기록 있는 날짜 불러오기 시작");
+
       // 모든 기록을 불러오기 (record_date 필드만 사용)
       const { data, error } = await supabase
         .from("bowel_records")
-        .select("record_date");
+        .select("record_date")
+        .not("record_date", "is", null); // NULL 값 제외
 
       if (error) throw error;
+
+      console.log("[CalendarWithRecords] DB에서 불러온 날짜 데이터:", data);
 
       // 중복 제거하여 날짜 Set 생성
       const dateSet = new Set<string>();
       data?.forEach((item: { record_date: string }) => {
-        if (item.record_date) {
-          // record_date가 유효한지 확인
+        // null, undefined, 빈 문자열 확인
+        if (
+          item.record_date &&
+          typeof item.record_date === "string" &&
+          item.record_date.trim() !== ""
+        ) {
+          // YYYY-MM-DD 형식의 유효한 날짜인지 확인 (엄격한 검증)
           if (dayjs(item.record_date, "YYYY-MM-DD", true).isValid()) {
-            // 날짜 추가
+            // 날짜 추가 전 로그
+            console.log(
+              `[CalendarWithRecords] 유효한 날짜 감지: ${item.record_date}`
+            );
             dateSet.add(item.record_date);
+          } else {
+            console.warn(
+              `[CalendarWithRecords] 유효하지 않은 날짜 형식 무시: ${item.record_date}`
+            );
           }
+        } else {
+          console.warn(`[CalendarWithRecords] 빈 record_date 값 무시`);
         }
       });
 
-      console.log("[CalendarWithRecords] 기록 있는 날짜:", Array.from(dateSet));
-      setDatesWithRecords(dateSet);
+      const validDates = Array.from(dateSet);
+      console.log(
+        "[CalendarWithRecords] 처리 후 유효한 기록 날짜:",
+        validDates
+      );
+
+      // 기존 상태와 비교하여 변경 사항이 있는지 확인
+      const currentDates = Array.from(datesWithRecords);
+      const hasChanged =
+        currentDates.length !== validDates.length ||
+        !currentDates.every((date) => validDates.includes(date));
+
+      if (hasChanged) {
+        console.log("[CalendarWithRecords] 날짜 목록 업데이트됨");
+        setDatesWithRecords(dateSet);
+      } else {
+        console.log("[CalendarWithRecords] 날짜 목록 변경 없음");
+      }
     } catch (err) {
       console.error("[CalendarWithRecords] 기록 날짜 로딩 실패:", err);
     }
