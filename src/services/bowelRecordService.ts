@@ -410,4 +410,95 @@ export class BowelRecordService {
       return { data: null, error: error as Error };
     }
   }
+
+  /**
+   * 특정 날짜 범위의 배변 기록을 조회합니다
+   * @param startDate 시작 날짜 (YYYY-MM-DD)
+   * @param endDate 종료 날짜 (YYYY-MM-DD)
+   */
+  static async getRecordsByDateRange(
+    startDate: string,
+    endDate: string
+  ): Promise<ServiceResponse<BowelRecord[]>> {
+    try {
+      console.log(
+        `[BowelRecordService] ${startDate} ~ ${endDate} 기간 기록 조회 요청`
+      );
+
+      const { data, error } = await supabase
+        .from("bowel_records")
+        .select("*")
+        .gte("record_date", startDate)
+        .lte("record_date", endDate)
+        .order("record_date", { ascending: true })
+        .order("day_index", { ascending: true });
+
+      if (error) throw error;
+
+      console.log(
+        `[BowelRecordService] ${startDate} ~ ${endDate} 기간 기록 ${
+          data?.length || 0
+        }개 조회됨`
+      );
+      return { data: data as BowelRecord[], error: null };
+    } catch (error) {
+      console.error(
+        `[BowelRecordService] ${startDate} ~ ${endDate} 기간 기록 조회 중 오류:`,
+        error
+      );
+      return { data: null, error: error as Error };
+    }
+  }
+
+  /**
+   * 특정 월의 배변 성공 횟수를 계산합니다
+   * @param year 연도 (예: 2025)
+   * @param month 월 (1-12)
+   */
+  static async getMonthlySuccessCount(
+    year: number,
+    month: number
+  ): Promise<ServiceResponse<number>> {
+    try {
+      // 월의 시작일과 마지막일 계산
+      const startDate = dayjs()
+        .year(year)
+        .month(month - 1)
+        .date(1)
+        .format("YYYY-MM-DD");
+
+      const endDate = dayjs()
+        .year(year)
+        .month(month - 1)
+        .endOf("month")
+        .format("YYYY-MM-DD");
+
+      console.log(
+        `[BowelRecordService] ${year}년 ${month}월 성공 기록 조회 (${startDate} ~ ${endDate})`
+      );
+
+      // 해당 월에 성공한 기록 조회
+      const { data: records, error } = await supabase
+        .from("bowel_records")
+        .select("id")
+        .gte("record_date", startDate)
+        .lte("record_date", endDate)
+        .eq("success", true);
+
+      if (error) throw error;
+
+      const successCount = records?.length || 0;
+      console.log(
+        `[BowelRecordService] ${year}년 ${month}월 성공 횟수: ${successCount}회`
+      );
+
+      return { data: successCount, error: null };
+    } catch (error) {
+      console.error(
+        `[BowelRecordService] ${year}년 ${month}월 성공 횟수 조회 중 오류:`,
+        error
+      );
+      return { data: null, error: error as Error };
+    }
+  }
 }
