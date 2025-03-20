@@ -35,12 +35,6 @@ dayjs.extend(timezone);
 // 한국 시간대 설정
 const KOREA_TIMEZONE = "Asia/Seoul";
 
-// 배지 색상을 위한 타입 정의
-type BadgeStatus = {
-  show: boolean;
-  color: "primary" | "error" | "warning" | "success";
-};
-
 const CalendarContainer = styled(Paper)(({ theme }) => ({
   padding: theme.spacing(2),
   borderRadius: theme.shape.borderRadius,
@@ -67,17 +61,12 @@ const RecordsList = styled(Box)(({ theme }) => ({
   marginTop: theme.spacing(2),
 }));
 
-// 커스텀 배지 컴포넌트
-const StatusBadge = styled(Badge, {
-  shouldForwardProp: (prop) => prop !== "badgeColor",
-})<{ badgeColor?: "primary" | "error" | "warning" | "success" }>(
-  ({ theme, badgeColor = "primary" }) => ({
-    "& .MuiBadge-badge": {
-      backgroundColor: theme.palette[badgeColor].main,
-      color: theme.palette[badgeColor].contrastText,
-    },
-  })
-);
+const HighlightedDay = styled(Badge)(({ theme }) => ({
+  "& .MuiBadge-badge": {
+    backgroundColor: theme.palette.primary.main,
+    color: theme.palette.primary.contrastText,
+  },
+}));
 
 /**
  * 배변 기록이 있는 캘린더 컴포넌트
@@ -91,8 +80,8 @@ const CalendarWithRecords: React.FC = () => {
   const [records, setRecords] = useState<BowelRecord[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [recordsStatus, setRecordsStatus] = useState<Map<string, BadgeStatus>>(
-    new Map()
+  const [datesWithRecords, setDatesWithRecords] = useState<Set<string>>(
+    new Set()
   );
 
   // 날짜 변경 핸들러
@@ -136,90 +125,32 @@ const CalendarWithRecords: React.FC = () => {
   // 기록이 있는 날짜 목록 불러오기
   const loadRecordDates = async () => {
     try {
-      // 모든 기록을 불러오기 (record_date, success, amount 필드가 필요함)
+      // 모든 기록을 불러오기 (record_date와 start_time 필드가 필요함)
       const { data, error } = await supabase
         .from("bowel_records")
-        .select("record_date, start_time, success, amount");
+        .select("record_date, start_time");
 
       if (error) throw error;
 
-      // 날짜별 상태 맵 생성
-      const statusMap = new Map<string, BadgeStatus>();
+      // 중복 제거하여 날짜 Set 생성 (한국 시간 기준으로 변환)
+      const dateSet = new Set<string>();
+      data?.forEach((item: { record_date?: string; start_time: string }) => {
+        if (item.start_time) {
+          // start_time을 한국 시간으로 변환하여 날짜 추출
+          const koreanDate = dayjs
+            .utc(item.start_time)
+            .tz(KOREA_TIMEZONE)
+            .format("YYYY-MM-DD");
 
-      // 1. 모든 날짜에 대한 데이터 수집
-      const dateRecords = new Map<
-        string,
-        { hasSuccess: boolean; hasFail: boolean; hasAbnormal: boolean }
-      >();
-
-      data?.forEach(
-        (item: {
-          record_date?: string;
-          start_time: string;
-          success: boolean;
-          amount: string | null;
-        }) => {
-          if (item.start_time) {
-            // start_time을 한국 시간으로 변환하여 날짜 추출
-            const koreanDate = dayjs
-              .utc(item.start_time)
-              .tz(KOREA_TIMEZONE)
-              .format("YYYY-MM-DD");
-
-            // 한국 시간 기준 날짜가 유효한지 확인
-            if (dayjs(koreanDate, "YYYY-MM-DD", true).isValid()) {
-              // 해당 날짜의 데이터가 없으면 초기화
-              if (!dateRecords.has(koreanDate)) {
-                dateRecords.set(koreanDate, {
-                  hasSuccess: false,
-                  hasFail: false,
-                  hasAbnormal: false,
-                });
-              }
-
-              const dateData = dateRecords.get(koreanDate)!;
-
-              // 상태 플래그 업데이트
-              if (item.amount === "이상") {
-                dateData.hasAbnormal = true;
-              }
-
-              if (item.success) {
-                dateData.hasSuccess = true;
-              } else {
-                dateData.hasFail = true;
-              }
-            }
+          // 한국 시간 기준 날짜가 유효한지 확인
+          if (dayjs(koreanDate, "YYYY-MM-DD", true).isValid()) {
+            // 한국 시간 기준 날짜 추가
+            dateSet.add(koreanDate);
           }
         }
-      );
-
-      // 2. 수집된 데이터를 기반으로 각 날짜의 배지 상태 결정
-      dateRecords.forEach((data, date) => {
-        let badgeColor: "primary" | "error" | "warning" | "success";
-
-        if (data.hasAbnormal) {
-          // 이상 데이터가 있으면 빨간색 (최우선순위)
-          badgeColor = "error";
-        } else if (data.hasFail && !data.hasSuccess) {
-          // 실패 데이터만 있으면 주황색
-          badgeColor = "warning";
-        } else if (data.hasSuccess) {
-          // 성공 데이터가 있으면(실패 데이터가 함께 있어도) 초록색
-          badgeColor = "success";
-        } else {
-          // 기본값 (여기에 도달하지 않아야 함)
-          badgeColor = "primary";
-        }
-
-        statusMap.set(date, { show: true, color: badgeColor });
       });
 
-      setRecordsStatus(statusMap);
-      console.log(
-        "[CalendarWithRecords] 날짜별 기록 상태 업데이트:",
-        Array.from(statusMap.entries())
-      );
+      setDatesWithRecords(dateSet);
     } catch (err) {
       console.error("[CalendarWithRecords] 기록 날짜 로딩 실패:", err);
     }
@@ -255,19 +186,15 @@ const CalendarWithRecords: React.FC = () => {
     pickersDayProps: any
   ) => {
     const formattedDay = day.format("YYYY-MM-DD");
-    const status = recordsStatus.get(formattedDay);
 
-    // 기록이 없으면 일반 날짜로 표시
-    if (!status) {
-      return <Box {...pickersDayProps} />;
-    }
+    // 명확하게 그 날짜에 기록이 있는지 확인
+    const hasRecords = datesWithRecords.has(formattedDay);
 
     return (
-      <StatusBadge
+      <HighlightedDay
         key={day.toString()}
         overlap="circular"
-        badgeContent="•"
-        badgeColor={status.color}
+        badgeContent={hasRecords ? "•" : undefined}
         {...pickersDayProps}
       />
     );
