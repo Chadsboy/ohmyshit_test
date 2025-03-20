@@ -54,12 +54,14 @@ const BowelRecordForm: React.FC<BowelRecordFormProps> = ({
   // 로딩 및 에러 상태
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [dateWarning, setDateWarning] = useState<string | null>(null);
 
   // 폼 제출 핸들러
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setError(null);
+    setDateWarning(null);
 
     try {
       console.log("[BowelRecordForm] 선택한 날짜:", selectedDate);
@@ -91,8 +93,20 @@ const BowelRecordForm: React.FC<BowelRecordFormProps> = ({
         "[BowelRecordForm] 저장된 record_date:",
         response.data?.record_date
       );
-      onSuccess();
-      handleClose();
+
+      // 날짜 불일치 경고 확인
+      if (response.data?.date_warning) {
+        setDateWarning(response.data.date_warning);
+        // 5초 후 자동으로 폼 닫기
+        setTimeout(() => {
+          onSuccess();
+          handleClose();
+        }, 5000);
+      } else {
+        // 날짜 불일치가 없으면 바로 닫기
+        onSuccess();
+        handleClose();
+      }
     } catch (err) {
       console.error("[BowelRecordForm] 저장 실패:", err);
       setError((err as Error).message || "저장 중 오류가 발생했습니다.");
@@ -109,6 +123,7 @@ const BowelRecordForm: React.FC<BowelRecordFormProps> = ({
     setAmount("보통");
     setMemo("");
     setError(null);
+    setDateWarning(null);
     onClose();
   };
 
@@ -125,6 +140,12 @@ const BowelRecordForm: React.FC<BowelRecordFormProps> = ({
           {error && (
             <Alert severity="error" sx={{ mt: 2, mb: 2 }}>
               {error}
+            </Alert>
+          )}
+
+          {dateWarning && (
+            <Alert severity="warning" sx={{ mt: 2, mb: 2 }}>
+              {dateWarning}
             </Alert>
           )}
 

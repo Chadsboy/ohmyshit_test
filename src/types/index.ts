@@ -23,6 +23,7 @@ export interface BowelRecord {
   created_at: string;
   record_date: string; // ISO 형식 날짜 (YYYY-MM-DD)
   day_index: number;
+  date_warning?: string | null; // 프론트엔드에서 사용하는 날짜 경고 메시지
 }
 
 // 서비스 응답 타입 정의

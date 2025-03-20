@@ -63,26 +63,28 @@ export class BowelRecordService {
       const startTimeIso = utcDateTime.toISOString();
       const endTimeIso = endDateTime.toISOString();
 
-      // 사용자가 선택한 날짜와 UTC 변환 후 한국 날짜 비교
+      // ===== 날짜 처리 로직 개선 =====
+      // 1. 사용자가 선택한 날짜
       const userSelectedDate = date;
 
-      // 표준 함수를 사용하여 한국 날짜 계산
+      // 2. 표준 함수를 사용하여 시작 시간의 한국 날짜 계산
       const actualKoreanDate = calculateRecordDate(startTimeIso);
 
+      // 3. 로그 기록 - 날짜 정보 비교
       console.log("[BowelRecordService] 사용자 선택 날짜:", userSelectedDate);
       console.log(
         "[BowelRecordService] 실제 시작 시간의 한국 날짜:",
         actualKoreanDate
       );
 
-      // 언제나 실제 한국 날짜를 record_date로 사용 (이게 중요!)
-      const koreanDate = actualKoreanDate;
+      // 4. 저장용 record_date 설정 - 항상 계산된 실제 한국 날짜 사용
+      const recordDate = actualKoreanDate;
 
-      // 날짜 불일치 확인 및 로그 기록
-      if (userSelectedDate !== koreanDate) {
-        console.warn(
-          `[BowelRecordService] 날짜 변경됨: 사용자 선택 날짜(${userSelectedDate})와 달리, 시작 시간의 한국 날짜(${koreanDate})를 record_date로 사용합니다.`
-        );
+      // 5. 날짜 불일치 경고 및 처리
+      let dateWarning = null;
+      if (userSelectedDate !== recordDate) {
+        dateWarning = `선택하신 날짜(${userSelectedDate})와 달리, 입력한 시간에 따라 실제 기록은 ${recordDate}에 표시됩니다.`;
+        console.warn(`[BowelRecordService] 날짜 불일치 감지: ${dateWarning}`);
       }
 
       // 고유한 day_index 값 조회 (같은 날짜에 중복되지 않도록)
@@ -90,7 +92,7 @@ export class BowelRecordService {
         .from("bowel_records")
         .select("day_index")
         .eq("user_id", currentUser.id)
-        .eq("record_date", koreanDate)
+        .eq("record_date", recordDate)
         .order("day_index", { ascending: false });
 
       if (fetchError) {
@@ -117,10 +119,10 @@ export class BowelRecordService {
         );
       }
 
-      // 레코드 데이터 생성 - 사용자가 선택한 날짜 사용
+      // 레코드 데이터 생성 - 계산된 한국 날짜 사용
       const recordData = {
         user_id: currentUser.id,
-        record_date: koreanDate,
+        record_date: recordDate,
         start_time: startTimeIso,
         end_time: endTimeIso,
         duration,
@@ -128,6 +130,7 @@ export class BowelRecordService {
         amount: isSuccess ? amount : null,
         memo: memo || null,
         day_index: dayIndex,
+        date_warning: dateWarning, // 날짜 불일치 경고 저장 (UI에서 표시 가능)
       };
 
       console.log("[BowelRecordService] 저장할 데이터:", recordData);
@@ -139,25 +142,70 @@ export class BowelRecordService {
         getKoreanDate(startTimeIso)
       );
 
-      // 데이터베이스에 저장
-      const { data, error } = await supabase
-        .from("bowel_records")
-        .insert([recordData])
-        .select("*")
-        .single();
+      // date_warning 필드가 없다면 제거 (DB 스키마에 없을 경우)
+      if (recordData.date_warning === null) {
+        // date_warning이 null이면 객체에서 필드 자체를 제거
+        const recordDataForDB = { ...recordData };
+        delete (recordDataForDB as any).date_warning;
 
-      if (error) throw error;
+        // DB에 저장할 때는 date_warning 없이 저장
+        const { data, error } = await supabase
+          .from("bowel_records")
+          .insert([recordDataForDB])
+          .select("*")
+          .single();
 
-      console.log("[BowelRecordService] 저장 성공:", data);
-      console.log("[BowelRecordService] 저장된 record_date:", data.record_date);
-      console.log(
-        "[BowelRecordService] 저장된 start_time:",
-        data.start_time,
-        "->",
-        getKoreanDate(data.start_time)
-      );
+        if (error) throw error;
 
-      return { data: data as BowelRecord, error: null };
+        // 반환할 때는 date_warning 추가
+        const responseData = {
+          ...data,
+          date_warning: dateWarning,
+        };
+
+        console.log("[BowelRecordService] 저장 성공:", data);
+        console.log(
+          "[BowelRecordService] 저장된 record_date:",
+          data.record_date
+        );
+        console.log(
+          "[BowelRecordService] 저장된 start_time:",
+          data.start_time,
+          "->",
+          getKoreanDate(data.start_time)
+        );
+
+        return { data: responseData as BowelRecord, error: null };
+      } else {
+        // date_warning이 있는 경우 그대로 저장 (DB 스키마에 해당 필드가 있을 경우)
+        const { data, error } = await supabase
+          .from("bowel_records")
+          .insert([recordData])
+          .select("*")
+          .single();
+
+        if (error) throw error;
+
+        console.log("[BowelRecordService] 저장 성공:", data);
+        console.log(
+          "[BowelRecordService] 저장된 record_date:",
+          data.record_date
+        );
+        console.log(
+          "[BowelRecordService] 저장된 start_time:",
+          data.start_time,
+          "->",
+          getKoreanDate(data.start_time)
+        );
+
+        // 반환 데이터에 날짜 경고 추가
+        const responseData = {
+          ...data,
+          date_warning: dateWarning,
+        };
+
+        return { data: responseData as BowelRecord, error: null };
+      }
     } catch (error) {
       console.error("[BowelRecordService] 배변 기록 생성 중 오류:", error);
       return { data: null, error: error as Error };
