@@ -9,7 +9,7 @@ import {
 import Timer from "../components/Timer";
 import Alert from "../components/Alert";
 import homeImage from "../assets/home.png";
-import { useTimerStore } from "../store/timerStore";
+import { useTimer } from "../contexts/TimerContext";
 
 const Home = () => {
   const [isTimerActive, setIsTimerActive] = useState(false);
@@ -17,8 +17,8 @@ const Home = () => {
   const isSmallScreen = useMediaQuery(theme.breakpoints.down("sm"));
   const isMediumScreen = useMediaQuery(theme.breakpoints.between("sm", "md"));
 
-  // 타이머 스토어에서 상태 가져오기
-  const { isActive } = useTimerStore();
+  // 타이머 컨텍스트에서 상태 가져오기
+  const { isActive } = useTimer();
 
   // 타이머 상태가 변경될 때마다 로컬 상태 업데이트
   useEffect(() => {

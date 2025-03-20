@@ -9,7 +9,8 @@ import ResultModal from "./modal/ResultModal";
 import ContentModal from "./modal/ContentModal";
 
 // 타이머 스토어 임포트
-import { useTimerStore } from "../store/timerStore";
+// import { useTimerStore } from "../store/timerStore";
+import { useTimer } from "../contexts/TimerContext";
 import { TimerResultHandler, StoolAmount } from "./timer/TimerResultHandler";
 
 // 숫자가 바뀔 때 페이드 애니메이션 - !중요: 배포 환경에서도 동일하게 적용되도록 수정
@@ -81,7 +82,7 @@ const Timer: React.FC = () => {
     setShouldShowModal,
     timerStartTime,
     timerEndTime,
-  } = useTimerStore();
+  } = useTimer();
 
   // 초 변경 감지
   const [secondChanged, setSecondChanged] = useState(false);

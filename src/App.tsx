@@ -11,6 +11,7 @@ import { Box, CircularProgress, Typography } from "@mui/material";
 import { supabase } from "./lib/supabase";
 import { CssBaseline } from "@mui/material";
 import { LoadingProvider, useLoading } from "./contexts/LoadingContext";
+import { TimerProvider } from "./contexts/TimerContext";
 
 // 페이지 임포트
 import Home from "./pages/Home";
@@ -383,7 +384,9 @@ function App() {
   return (
     <Router>
       <LoadingProvider>
-        <AppContent />
+        <TimerProvider>
+          <AppContent />
+        </TimerProvider>
       </LoadingProvider>
     </Router>
   );
