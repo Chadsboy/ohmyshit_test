@@ -65,15 +65,25 @@ export class BowelRecordService {
       // 사용자가 선택한 날짜와 UTC 변환 후 한국 날짜 비교
       const userSelectedDate = date;
 
-      // UTC+9 변환 방식으로 명시적 처리
+      // 한국 로케일을 사용하여 날짜 변환
       const startDate = new Date(startTimeIso);
-      const actualKoreanDate = new Date(
-        startDate.getTime() + 9 * 60 * 60 * 1000
-      )
-        .toISOString()
-        .split("T")[0]; // YYYY-MM-DD 형식
+      // 9시간(UTC+9) 추가
+      startDate.setHours(startDate.getHours() + 9);
+
+      // 한국 로케일로 날짜 형식 변환 (YYYY. MM. DD. 형식으로 반환)
+      const koDateStr = startDate.toLocaleDateString("ko-KR");
+
+      // YYYY-MM-DD 형식으로 변환
+      const dateParts = koDateStr.split(". ");
+      const actualKoreanDate =
+        dateParts[0] +
+        "-" +
+        dateParts[1].padStart(2, "0") +
+        "-" +
+        dateParts[2].padStart(2, "0");
 
       console.log("[BowelRecordService] 사용자 선택 날짜:", userSelectedDate);
+      console.log("[BowelRecordService] 한국 로케일 날짜:", koDateStr);
       console.log(
         "[BowelRecordService] 실제 시작 시간의 한국 날짜:",
         actualKoreanDate
