@@ -385,6 +385,7 @@ function App() {
     <Router>
       <LoadingProvider>
         <TimerProvider>
+          <CssBaseline />
           <AppContent />
         </TimerProvider>
       </LoadingProvider>

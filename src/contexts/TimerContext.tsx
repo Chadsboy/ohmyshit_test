@@ -34,7 +34,7 @@ interface TimerContextType {
 }
 
 // 로컬 스토리지 키
-const TIMER_STATE_KEY = "timer-context-state";
+const TIMER_STATE_KEY = "timer-context-state-v3";
 
 // Context 생성
 const TimerContext = createContext<TimerContextType | undefined>(undefined);
@@ -64,99 +64,105 @@ export const TimerProvider: React.FC<TimerProviderProps> = ({ children }) => {
 
   // 타이머 인터벌 ref
   const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const lastSavedTimeRef = useRef<number>(Date.now());
 
-  // 타이머 상태를 로컬 스토리지에 저장
-  const saveTimerState = useCallback(() => {
-    const stateToSave = {
-      isActive,
-      time,
-      timerStartTime,
-      timerEndTime,
-      hasAddedTime,
-      isCompleted,
-      shouldShowModal,
-      lastSavedAt: Date.now(),
-    };
+  // 타이머의 종료 시간을 저장할 ref
+  const targetEndTimeRef = useRef<number | null>(null);
 
-    try {
-      localStorage.setItem(TIMER_STATE_KEY, JSON.stringify(stateToSave));
-      console.log("[TimerContext] 타이머 상태 저장됨:", stateToSave);
-    } catch (error) {
-      console.error("[TimerContext] 타이머 상태 저장 중 오류 발생:", error);
+  // 초기화 시 불필요한 로컬 스토리지 데이터 제거
+  useEffect(() => {
+    // 이전 버전의 로컬 스토리지 데이터 삭제
+    localStorage.removeItem("timer-context-state");
+    localStorage.removeItem("timer-context-state-v2");
+    localStorage.removeItem("timer-context-state-v3");
+    localStorage.removeItem("timer-storage"); // 이전 zustand 저장소
+
+    console.log("[타이머] 불필요한 로컬 스토리지 데이터 제거됨");
+  }, []);
+
+  // 직접 구현한 타이머 시작 함수
+  const startTimer = () => {
+    console.log("[타이머] 시작함수 호출됨, 현재시간:", time);
+
+    // 이미 실행 중이면 중단
+    if (isActive) {
+      console.log("[타이머] 이미 실행 중, 무시");
+      return;
     }
-  }, [
-    isActive,
-    time,
-    timerStartTime,
-    timerEndTime,
-    hasAddedTime,
-    isCompleted,
-    shouldShowModal,
-  ]);
 
-  // 타이머 시작
-  const startTimer = useCallback(() => {
-    if (isActive) return;
-
+    // 활성화 상태로 변경
     setIsActive(true);
 
-    if (!timerStartTime) {
-      setTimerStartTime(Date.now());
-    }
-
-    // 이전 인터벌 정리
+    // 이전 타이머 제거
     if (timerIntervalRef.current) {
-      clearInterval(timerIntervalRef.current);
+      clearTimeout(timerIntervalRef.current);
+      timerIntervalRef.current = null;
     }
 
-    // 새 인터벌 설정 (웹 워커 대신 고정밀 타이머 사용)
-    const startTime = Date.now();
-    const initialTime = time;
+    // 시작 시간과 목표 종료 시간 기록 (절대 시간 사용)
+    const startTimeMs = Date.now();
+    const targetEndTimeMs = startTimeMs + time * 1000;
 
-    timerIntervalRef.current = setInterval(() => {
-      const elapsed = Math.floor((Date.now() - startTime) / 1000);
-      const newTime = Math.max(0, initialTime - elapsed);
+    // 목표 종료 시간 저장
+    targetEndTimeRef.current = targetEndTimeMs;
 
-      setTime(newTime);
+    // 시작 시간 설정
+    if (!timerStartTime) {
+      console.log("[타이머] 시작 시간 설정");
+      setTimerStartTime(startTimeMs);
+    }
 
-      if (newTime === 0) {
-        // 타이머 완료
+    // 타이머 함수
+    function runTimer() {
+      console.log("[타이머] 타이머 함수 실행됨");
+
+      // 현재 시간과 목표 종료 시간의 차이를 계산
+      const currentTimeMs = Date.now();
+      const remainingTimeMs = Math.max(0, targetEndTimeMs - currentTimeMs);
+      const remainingSeconds = Math.ceil(remainingTimeMs / 1000);
+
+      console.log("[타이머] 남은 시간(초):", remainingSeconds);
+
+      // 시간 업데이트
+      setTime(remainingSeconds);
+
+      // 시간이 0이면 타이머 종료
+      if (remainingSeconds <= 0) {
+        console.log("[타이머] 완료됨");
         setIsActive(false);
         setIsCompleted(true);
         setTimerEndTime(Date.now());
         setShouldShowModal(true);
-
-        if (timerIntervalRef.current) {
-          clearInterval(timerIntervalRef.current);
-          timerIntervalRef.current = null;
-        }
-
-        // 타이머 완료 이벤트 발송
-        window.dispatchEvent(new CustomEvent(TIMER_COMPLETED_EVENT));
+        targetEndTimeRef.current = null;
+        return;
       }
-    }, 100); // 100ms 간격으로 업데이트하여 더 정확한 타이머 구현
 
-    // 상태 저장
-    saveTimerState();
-  }, [isActive, time, timerStartTime, saveTimerState]);
+      // 다음 업데이트 시간 계산 (최대 1초, 최소 10ms)
+      // 마지막 1초는 더 정확한 타이밍을 위해 더 자주 체크
+      const nextUpdateDelay = remainingSeconds <= 1 ? 10 : 100;
 
-  // 타이머 일시 정지
-  const pauseTimer = useCallback(() => {
-    setIsActive(false);
-
-    // 인터벌 정리
-    if (timerIntervalRef.current) {
-      clearInterval(timerIntervalRef.current);
-      timerIntervalRef.current = null;
+      // 다음 타이머 설정
+      timerIntervalRef.current = setTimeout(runTimer, nextUpdateDelay);
     }
 
-    // 상태 저장
-    saveTimerState();
-  }, [saveTimerState]);
+    // 첫 타이머 설정 (즉시 시작)
+    console.log("[타이머] 첫 타이머 설정");
+    timerIntervalRef.current = setTimeout(runTimer, 0);
+  };
+
+  // 타이머 일시 정지
+  const pauseTimer = () => {
+    console.log("[타이머] 정지됨");
+    setIsActive(false);
+
+    if (timerIntervalRef.current) {
+      clearTimeout(timerIntervalRef.current);
+      timerIntervalRef.current = null;
+    }
+  };
 
   // 타이머 리셋
-  const resetTimer = useCallback(() => {
+  const resetTimer = () => {
+    console.log("[타이머] 리셋됨");
     setIsActive(false);
     setTime(DEFAULT_TIMER_TIME);
     setTimerStartTime(null);
@@ -165,90 +171,118 @@ export const TimerProvider: React.FC<TimerProviderProps> = ({ children }) => {
     setIsCompleted(false);
     setShouldShowModal(false);
 
-    // 인터벌 정리
     if (timerIntervalRef.current) {
-      clearInterval(timerIntervalRef.current);
+      clearTimeout(timerIntervalRef.current);
       timerIntervalRef.current = null;
     }
-
-    // 상태 저장
-    saveTimerState();
-  }, [saveTimerState]);
+  };
 
   // 시간 추가
-  const addTime = useCallback(
-    (seconds: number) => {
+  const addTime = (seconds: number) => {
+    console.log("[타이머] 시간 추가:", seconds);
+
+    if (isActive) {
+      // 활성 상태일 때는 현재 타이머를 정지하고
+      pauseTimer();
+
+      // 시간을 추가한 후
       setTime((prevTime) => prevTime + seconds);
       setHasAddedTime(true);
-      saveTimerState();
-    },
-    [saveTimerState]
-  );
 
-  // 시간 감소
-  const decrementTime = useCallback(() => {
-    setTime((prevTime) => {
-      if (prevTime <= 0) return prevTime;
+      // 타이머를 다시 시작
+      setTimeout(() => startTimer(), 0);
+    } else {
+      // 비활성 상태일 때는 단순히 시간만 추가
+      setTime((prevTime) => prevTime + seconds);
+      setHasAddedTime(true);
+    }
+  };
 
-      const newTime = prevTime - 1;
+  // 시간 감소 (외부에서 직접 호출용)
+  const decrementTime = () => {
+    setTime((prevTime) => Math.max(0, prevTime - 1));
+  };
 
-      if (newTime === 0) {
-        // 타이머 완료
-        setIsActive(false);
-        setIsCompleted(true);
-        setTimerEndTime(Date.now());
-        setShouldShowModal(true);
-
-        // 타이머 완료 이벤트 발송
-        window.dispatchEvent(new CustomEvent(TIMER_COMPLETED_EVENT));
-      }
-
-      return newTime;
-    });
-
-    saveTimerState();
-  }, [saveTimerState]);
-
-  // 페이지 가시성 변경 처리
+  // 페이지 가시성 변경 감지
   useEffect(() => {
     const handleVisibilityChange = () => {
-      if (document.visibilityState === "hidden") {
-        // 페이지가 숨겨질 때 상태 저장
-        lastSavedTimeRef.current = Date.now();
-        saveTimerState();
+      if (document.visibilityState === "visible") {
+        console.log("[타이머] 페이지 다시 표시됨");
+        // 타이머가 활성 상태이고 목표 종료 시간이 있을 때만 실행
+        if (isActive && targetEndTimeRef.current !== null) {
+          // 타이머 멈추지 않고 현재 남은 시간 업데이트
+          const currentTimeMs = Date.now();
+          const remainingTimeMs = Math.max(
+            0,
+            targetEndTimeRef.current - currentTimeMs
+          );
+          const remainingSeconds = Math.ceil(remainingTimeMs / 1000);
 
-        // 활성 상태이면 인터벌 정리 (배터리 절약)
-        if (isActive && timerIntervalRef.current) {
-          clearInterval(timerIntervalRef.current);
-          timerIntervalRef.current = null;
-        }
-      } else if (document.visibilityState === "visible" && isActive) {
-        // 페이지가 다시 표시되고 타이머가 활성 상태였다면
-        const now = Date.now();
-        const elapsedSinceHidden = Math.floor(
-          (now - lastSavedTimeRef.current) / 1000
-        );
+          console.log(
+            "[타이머] 페이지 복귀 후 남은 시간(초):",
+            remainingSeconds
+          );
 
-        // 시간 조정
-        setTime((prevTime) => {
-          const adjustedTime = Math.max(0, prevTime - elapsedSinceHidden);
-
-          if (adjustedTime === 0 && prevTime > 0) {
-            // 숨겨진 동안 타이머가 완료됨
-            setIsActive(false);
-            setIsCompleted(true);
-            setTimerEndTime(now);
-            setShouldShowModal(true);
-
-            // 타이머 완료 이벤트 발송
-            window.dispatchEvent(new CustomEvent(TIMER_COMPLETED_EVENT));
-          } else if (adjustedTime > 0 && isActive) {
-            // 타이머 재시작
-            startTimer();
+          // 기존 타이머 정리
+          if (timerIntervalRef.current) {
+            clearTimeout(timerIntervalRef.current);
+            timerIntervalRef.current = null;
           }
 
-          return adjustedTime;
-        });
+          // 남은 시간이 0이면 타이머 완료 처리
+          if (remainingSeconds <= 0) {
+            setTime(0);
+            setIsActive(false);
+            setIsCompleted(true);
+            setTimerEndTime(Date.now());
+            setShouldShowModal(true);
+            targetEndTimeRef.current = null;
+          } else {
+            // 남은 시간 업데이트 후 타이머 재시작
+            setTime(remainingSeconds);
+
+            // 타이머 재시작 함수 (내부에서 기능 정의하여 클로저 활용)
+            const restartTimer = () => {
+              // 타이머 활성화
+              setIsActive(true);
+
+              // 타이머 함수 재정의
+              function runTimer() {
+                const currentTime = Date.now();
+                const remaining = Math.max(
+                  0,
+                  targetEndTimeRef.current! - currentTime
+                );
+                const remainingSecs = Math.ceil(remaining / 1000);
+
+                console.log("[타이머] 재시작 후 남은 시간(초):", remainingSecs);
+
+                // 시간 업데이트
+                setTime(remainingSecs);
+
+                // 타이머 완료 체크
+                if (remainingSecs <= 0) {
+                  setIsActive(false);
+                  setIsCompleted(true);
+                  setTimerEndTime(Date.now());
+                  setShouldShowModal(true);
+                  targetEndTimeRef.current = null;
+                  return;
+                }
+
+                // 다음 업데이트 예약
+                const delay = remainingSecs <= 1 ? 10 : 100;
+                timerIntervalRef.current = setTimeout(runTimer, delay);
+              }
+
+              // 즉시 타이머 시작
+              timerIntervalRef.current = setTimeout(runTimer, 0);
+            };
+
+            // 타이머 재시작
+            restartTimer();
+          }
+        }
       }
     };
 
@@ -256,90 +290,19 @@ export const TimerProvider: React.FC<TimerProviderProps> = ({ children }) => {
     document.addEventListener("visibilitychange", handleVisibilityChange);
 
     return () => {
+      // 이벤트 리스너 제거
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
-  }, [isActive, saveTimerState, startTimer]);
+  }, [isActive]);
 
-  // 초기 상태 복원
+  // 브라우저 종료 시 정리
   useEffect(() => {
-    try {
-      const savedStateJSON = localStorage.getItem(TIMER_STATE_KEY);
-
-      if (savedStateJSON) {
-        const savedState = JSON.parse(savedStateJSON);
-
-        // 저장된 상태가 활성 상태였다면 경과 시간 계산
-        if (savedState.isActive) {
-          const now = Date.now();
-          const elapsed = savedState.lastSavedAt
-            ? Math.floor((now - savedState.lastSavedAt) / 1000)
-            : 0;
-
-          // 남은 시간 계산
-          const remainingTime = Math.max(0, savedState.time - elapsed);
-
-          // 상태 복원
-          setIsActive(remainingTime > 0);
-          setTime(remainingTime);
-          setTimerStartTime(savedState.timerStartTime);
-          setHasAddedTime(savedState.hasAddedTime || false);
-
-          // 타이머가 완료되었는지 확인
-          if (remainingTime === 0 && savedState.time > 0) {
-            setIsCompleted(true);
-            setTimerEndTime(now);
-            setShouldShowModal(true);
-          } else {
-            setIsCompleted(savedState.isCompleted || false);
-            setTimerEndTime(savedState.timerEndTime);
-            setShouldShowModal(savedState.shouldShowModal || false);
-          }
-
-          // 활성 상태였다면 타이머 재시작
-          if (remainingTime > 0 && savedState.isActive) {
-            // 약간 지연 후 타이머 시작 (상태 업데이트가 완료될 시간 부여)
-            setTimeout(() => startTimer(), 0);
-          }
-        } else {
-          // 비활성 상태였다면 그대로 복원
-          setIsActive(false);
-          setTime(savedState.time || DEFAULT_TIMER_TIME);
-          setTimerStartTime(savedState.timerStartTime);
-          setTimerEndTime(savedState.timerEndTime);
-          setHasAddedTime(savedState.hasAddedTime || false);
-          setIsCompleted(savedState.isCompleted || false);
-          setShouldShowModal(savedState.shouldShowModal || false);
-        }
-
-        console.log("[TimerContext] 타이머 상태 복원됨");
-      }
-    } catch (error) {
-      console.error("[TimerContext] 타이머 상태 복원 중 오류 발생:", error);
-      resetTimer();
-    }
-  }, [resetTimer, startTimer]);
-
-  // 언마운트 또는 페이지 이탈 시 상태 저장
-  useEffect(() => {
-    const handleBeforeUnload = () => {
-      saveTimerState();
-    };
-
-    window.addEventListener("beforeunload", handleBeforeUnload);
-
     return () => {
-      // 인터벌 정리
       if (timerIntervalRef.current) {
-        clearInterval(timerIntervalRef.current);
+        clearTimeout(timerIntervalRef.current);
       }
-
-      // 이벤트 리스너 제거
-      window.removeEventListener("beforeunload", handleBeforeUnload);
-
-      // 상태 저장
-      saveTimerState();
     };
-  }, [saveTimerState]);
+  }, []);
 
   // 컨텍스트 값
   const value: TimerContextType = {

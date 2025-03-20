@@ -82,6 +82,7 @@ const Timer: React.FC = () => {
     setShouldShowModal,
     timerStartTime,
     timerEndTime,
+    isCompleted,
   } = useTimer();
 
   // 초 변경 감지
@@ -91,10 +92,8 @@ const Timer: React.FC = () => {
 
   // 개발 환경 로그 (디버깅용)
   useEffect(() => {
-    if (process.env.NODE_ENV === "development") {
-      console.log("Timer 컴포넌트 isActive:", isActive);
-    }
-  }, [isActive]);
+    console.log("Timer 컴포넌트 렌더링됨, isActive:", isActive, "time:", time);
+  }, [isActive, time]);
 
   // 초 변경 효과 처리
   useEffect(() => {
@@ -113,20 +112,27 @@ const Timer: React.FC = () => {
 
   // 결과 모달 열기
   const handleOpenResultModal = () => {
+    console.log("결과 모달 열기");
     pauseTimer();
     setShouldShowModal(true);
   };
 
   // 결과 모달 닫기
   const handleCloseResultModal = () => {
+    console.log("결과 모달 닫기");
     setShouldShowModal(false);
+
     // 모달이 닫힐 때 타이머 다시 시작
-    startTimer();
+    if (time > 0 && !isCompleted) {
+      console.log("모달이 닫힐 때 타이머 다시 시작");
+      startTimer();
+    }
   };
 
   // 배변 결과 성공 저장 처리
   const handleSuccess = async (amount: StoolAmount, memo: string) => {
     try {
+      console.log("배변 결과 성공 저장 시작", amount, memo);
       setIsSaving(true);
 
       // TimerResultHandler를 사용하여 성공 기록 저장
@@ -142,6 +148,7 @@ const Timer: React.FC = () => {
 
       // 타이머 리셋
       resetTimer();
+      console.log("배변 결과 성공 저장 완료");
     } catch (error) {
       console.error("배변 결과 저장 실패:", error);
     } finally {
@@ -152,6 +159,7 @@ const Timer: React.FC = () => {
   // 배변 결과 실패 저장 처리
   const handleFail = async () => {
     try {
+      console.log("배변 결과 실패 저장 시작");
       setIsSaving(true);
 
       // TimerResultHandler를 사용하여 실패 기록 저장
@@ -165,6 +173,7 @@ const Timer: React.FC = () => {
 
       // 타이머 리셋
       resetTimer();
+      console.log("배변 결과 실패 저장 완료");
     } catch (error) {
       console.error("배변 결과 저장 실패:", error);
     } finally {
@@ -172,10 +181,36 @@ const Timer: React.FC = () => {
     }
   };
 
-  // 타이머 시간 1분 추가
-  const handleAddTime = () => {
-    addTime(180); // 3분 = 180초 추가
+  // 시작 버튼 클릭 로직
+  const handleStartTimer = () => {
+    console.log("시작 버튼 클릭됨, 현재 상태:", { isActive, time });
+    // 타이머 시작 상태 강제 설정
+    if (!isActive) {
+      startTimer();
+      // 타이머 상태 확인을 위한 체크
+      setTimeout(() => {
+        console.log("타이머 시작 후 상태 확인:", { isActive, time });
+      }, 1500);
+    }
   };
+
+  // 타이머 시간 추가
+  const handleAddTime = () => {
+    console.log("시간 추가 버튼 클릭됨, 현재 시간:", time);
+    addTime(180); // 3분 = 180초 추가
+    console.log("시간 추가 후:", time + 180);
+  };
+
+  // 타이머 상태 확인
+  useEffect(() => {
+    const checkTimer = setInterval(() => {
+      if (isActive) {
+        console.log("타이머 상태 확인 - isActive:", isActive, "time:", time);
+      }
+    }, 3000);
+
+    return () => clearInterval(checkTimer);
+  }, [isActive, time]);
 
   return (
     <>
@@ -202,7 +237,7 @@ const Timer: React.FC = () => {
         <TimerControls
           isActive={isActive}
           hasAddedTime={hasAddedTime}
-          onStart={startTimer}
+          onStart={handleStartTimer}
           onAddTime={handleAddTime}
           onOpenContent={handleOpenContentModal}
           onOpenResult={handleOpenResultModal}
