@@ -10,7 +10,11 @@ import { getCurrentUser } from "./auth";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
-import { toKoreanTime, KOREA_TIMEZONE } from "../utils/dateHelpers";
+import {
+  toKoreanTime,
+  KOREA_TIMEZONE,
+  getKoreanDate,
+} from "../utils/dateHelpers";
 
 // dayjs 플러그인 설정
 dayjs.extend(utc);
@@ -213,11 +217,6 @@ export class EventService {
       // 날짜 필드 추가 (record_date) - 사용자가 선택한 날짜를 항상 우선 사용
       const recordDate = event.date;
 
-      console.log("[EventService] 저장 전 데이터:", {
-        ...bowelData,
-        record_date: recordDate,
-      });
-
       // 이벤트 생성 전 시간 정보 로깅
       const startTimeObj = new Date(bowelData.start_time);
       console.log(
@@ -232,42 +231,38 @@ export class EventService {
         "[EventService] 저장되는 시작 시간 (한국 시간):",
         toKoreanTime(bowelData.start_time)
       );
-      console.log("[EventService] 저장되는 record_date 날짜:", recordDate);
+      console.log("[EventService] 사용자 선택 날짜:", recordDate);
 
-      // 이벤트 데이터 저장, record_date는 사용자가 선택한 날짜로 명시적 설정
+      // 시작 시간에서 한국 날짜 추출 (한국 시간대로 변환하여 날짜만 가져옴)
+      const koreanDateFromStartTime = getKoreanDate(bowelData.start_time);
+      console.log(
+        "[EventService] 시작 시간의 한국 날짜:",
+        koreanDateFromStartTime
+      );
+
+      // 시간대 불일치 경고 출력
+      if (recordDate !== koreanDateFromStartTime) {
+        console.warn(
+          `[EventService] 시간대 주의: 사용자 선택 날짜(${recordDate})와 start_time의 한국 날짜(${koreanDateFromStartTime})가 다릅니다. 시작 시간 기준 날짜를 사용합니다.`
+        );
+      }
+
+      // 이벤트 데이터를 준비하고 record_date는 시작 시간의 한국 날짜로 설정
+      const recordToInsert = {
+        ...bowelData,
+        record_date: koreanDateFromStartTime,
+      };
+
+      // 이벤트 데이터 저장
       const { data, error } = await supabase
         .from("bowel_records")
-        .insert([{ ...bowelData, record_date: recordDate }])
+        .insert([recordToInsert])
         .select("*")
         .single();
 
       if (error) throw error;
 
       console.log("[EventService] 저장 후 데이터:", data);
-
-      // 저장 후 record_date가 올바른지 확인하고 필요시 수정
-      if (data.record_date !== recordDate) {
-        console.log(
-          `[EventService] record_date 불일치 감지: ${data.record_date} != ${recordDate}, 수정 시도`
-        );
-
-        // record_date 필드를 올바르게 업데이트
-        const { error: updateError } = await supabase
-          .from("bowel_records")
-          .update({ record_date: recordDate })
-          .eq("id", data.id);
-
-        if (updateError) {
-          console.error(
-            "[EventService] record_date 업데이트 실패:",
-            updateError
-          );
-        } else {
-          console.log(`[EventService] record_date를 ${recordDate}로 수정 완료`);
-          // 메모리 상의 객체도 업데이트
-          data.record_date = recordDate;
-        }
-      }
 
       // 생성된 BowelRecord를 CalendarEvent로 변환
       const calendarEvent = bowelRecordToCalendarEvent(data as BowelRecord);
