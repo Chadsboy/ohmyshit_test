@@ -247,10 +247,40 @@ export class EventService {
         );
       }
 
+      // 해당 날짜에 이미 존재하는 레코드의 최대 day_index 조회
+      const { data: existingRecords, error: fetchError } = await supabase
+        .from("bowel_records")
+        .select("day_index")
+        .eq("user_id", currentUser.id)
+        .eq("record_date", koreanDateFromStartTime)
+        .order("day_index", { ascending: false });
+
+      if (fetchError) {
+        console.error("[EventService] 기존 레코드 조회 중 오류:", fetchError);
+        throw fetchError;
+      }
+
+      // 해당 날짜의 최대 day_index 계산 (없으면 0, 있으면 최대값 + 1)
+      let nextDayIndex = 1; // 기본값 1부터 시작
+      if (existingRecords && existingRecords.length > 0) {
+        const maxDayIndex = Math.max(
+          ...existingRecords.map((r) => r.day_index || 0)
+        );
+        nextDayIndex = maxDayIndex + 1;
+        console.log(
+          `[EventService] 기존 최대 day_index: ${maxDayIndex}, 새 day_index: ${nextDayIndex}`
+        );
+      } else {
+        console.log(
+          `[EventService] 해당 날짜에 기존 레코드 없음, day_index: ${nextDayIndex} 사용`
+        );
+      }
+
       // 이벤트 데이터를 준비하고 record_date는 시작 시간의 한국 날짜로 설정
       const recordToInsert = {
         ...bowelData,
         record_date: koreanDateFromStartTime,
+        day_index: nextDayIndex,
       };
 
       // 이벤트 데이터 저장
