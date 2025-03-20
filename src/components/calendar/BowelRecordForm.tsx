@@ -238,7 +238,14 @@ const BowelRecordForm: React.FC<BowelRecordFormProps> = ({
   };
 
   return (
-    <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
+    <Dialog
+      open={open}
+      onClose={handleClose}
+      maxWidth="sm"
+      fullWidth
+      disableScrollLock={false}
+      sx={{ overflow: "hidden" }}
+    >
       <DialogTitle>
         <Typography variant="h6" fontWeight="bold">
           {selectedDate} 배변 기록 추가

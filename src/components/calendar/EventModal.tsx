@@ -102,6 +102,8 @@ const EventModal: React.FC<EventModalProps> = ({
       onClose={onClose}
       maxWidth="sm"
       fullWidth
+      disableScrollLock={false}
+      sx={{ overflow: "hidden" }}
       aria-labelledby="event-modal-title"
       PaperProps={{
         sx: {
