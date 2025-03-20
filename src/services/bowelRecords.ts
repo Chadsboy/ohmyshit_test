@@ -90,17 +90,29 @@ export const getBowelRecordsByDate = async (
   date: string // ISO 형식 날짜 (YYYY-MM-DD)
 ): Promise<ServiceResponse<BowelRecord[]>> => {
   try {
+    console.log(`[getBowelRecordsByDate] ${date} 날짜 기록 조회 요청`);
+
+    // record_date 필드를 사용하여 해당 날짜의 기록만 조회 (BowelRecordService와 일관성 유지)
     const { data: records, error } = await supabase
       .from("bowel_records")
       .select("*")
       .eq("record_date", date)
-      .order("day_index", { ascending: true });
+      .order("start_time", { ascending: true });
 
     if (error) throw error;
 
+    console.log(
+      `[getBowelRecordsByDate] ${date} 날짜 기록 ${
+        records?.length || 0
+      }개 조회됨`
+    );
+
     return { data: records, error: null };
   } catch (error) {
-    console.error("배변 기록 조회 중 오류:", error);
+    console.error(
+      `[getBowelRecordsByDate] ${date} 날짜 기록 조회 중 오류:`,
+      error
+    );
     return { data: null, error: error as Error };
   }
 };
