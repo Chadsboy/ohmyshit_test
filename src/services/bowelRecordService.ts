@@ -4,6 +4,7 @@ import { getCurrentUser } from "./auth";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
+import { getKoreanDate } from "../utils/dateHelpers";
 
 // dayjs 플러그인 설정
 dayjs.extend(utc);
@@ -61,23 +62,23 @@ export class BowelRecordService {
       const startTimeIso = utcDateTime.toISOString();
       const endTimeIso = endDateTime.toISOString();
 
-      // 한국 시간 기준으로 record_date 생성 - 반드시 원래 입력된 날짜 사용
-      // 시간대 변환 과정에서 날짜가 바뀌는 경우를 방지하기 위함
-      const koreanDate = date;
-
-      // 실제 시작 시간을 한국 날짜로 변환 (로깅용)
+      // 사용자가 선택한 날짜와 UTC 변환 후 한국 날짜 비교
+      const userSelectedDate = date;
       const actualKoreanDate = getKoreanDate(startTimeIso);
 
-      console.log("[BowelRecordService] 저장할 record_date:", koreanDate);
+      console.log("[BowelRecordService] 사용자 선택 날짜:", userSelectedDate);
       console.log(
         "[BowelRecordService] 실제 시작 시간의 한국 날짜:",
         actualKoreanDate
       );
 
-      // 날짜 불일치 확인
-      if (koreanDate !== actualKoreanDate) {
+      // 언제나 실제 한국 날짜를 record_date로 사용 (이게 중요!)
+      const koreanDate = actualKoreanDate;
+
+      // 날짜 불일치 확인 및 로그 기록
+      if (userSelectedDate !== koreanDate) {
         console.warn(
-          `[BowelRecordService] 날짜 불일치 주의: 입력된 날짜(${koreanDate})와 시작 시간의 한국 날짜(${actualKoreanDate})가 다릅니다. 입력된 날짜를 우선 사용합니다.`
+          `[BowelRecordService] 날짜 변경됨: 사용자 선택 날짜(${userSelectedDate})와 달리, 시작 시간의 한국 날짜(${koreanDate})를 record_date로 사용합니다.`
         );
       }
 
@@ -127,6 +128,13 @@ export class BowelRecordService {
       };
 
       console.log("[BowelRecordService] 저장할 데이터:", recordData);
+      console.log("[BowelRecordService] record_date:", recordData.record_date);
+      console.log(
+        "[BowelRecordService] start_time:",
+        startTimeIso,
+        "->",
+        getKoreanDate(startTimeIso)
+      );
 
       // 데이터베이스에 저장
       const { data, error } = await supabase
@@ -139,6 +147,12 @@ export class BowelRecordService {
 
       console.log("[BowelRecordService] 저장 성공:", data);
       console.log("[BowelRecordService] 저장된 record_date:", data.record_date);
+      console.log(
+        "[BowelRecordService] 저장된 start_time:",
+        data.start_time,
+        "->",
+        getKoreanDate(data.start_time)
+      );
 
       return { data: data as BowelRecord, error: null };
     } catch (error) {
