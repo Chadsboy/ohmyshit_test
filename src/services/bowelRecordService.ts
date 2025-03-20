@@ -41,11 +41,18 @@ export class BowelRecordService {
         throw new Error("사용자 인증 정보를 찾을 수 없습니다.");
       }
 
+      console.log("[BowelRecordService] 입력된 날짜/시간:", date, time);
+
       // 한국 시간 기준으로 날짜와 시간 조합
       const koreaDateTime = dayjs.tz(`${date}T${time}:00`, KOREA_TIMEZONE);
+      console.log(
+        "[BowelRecordService] 한국 시간 객체:",
+        koreaDateTime.format()
+      );
 
       // UTC 시간으로 변환 (데이터베이스 저장용)
       const utcDateTime = koreaDateTime.utc();
+      console.log("[BowelRecordService] UTC 시간 객체:", utcDateTime.format());
 
       // 종료 시간 계산 (duration 분 후)
       const endDateTime = utcDateTime.add(duration, "minute");
@@ -54,25 +61,72 @@ export class BowelRecordService {
       const startTimeIso = utcDateTime.toISOString();
       const endTimeIso = endDateTime.toISOString();
 
-      // 한국 시간 기준으로 record_date 생성
-      const koreanDate = koreaDateTime.format("YYYY-MM-DD");
+      // 한국 시간 기준으로 record_date 생성 - 반드시 원래 입력된 날짜 사용
+      // 시간대 변환 과정에서 날짜가 바뀌는 경우를 방지하기 위함
+      const koreanDate = date;
 
-      // 현재 시간 기반으로 고유한 day_index 생성
-      const uniqueIndex =
-        (Date.now() % 10000) + Math.floor(Math.random() * 1000);
+      // 실제 시작 시간을 한국 날짜로 변환 (로깅용)
+      const actualKoreanDate = getKoreanDate(startTimeIso);
 
-      // 레코드 데이터 생성 - 한국 시간 기준 날짜를 저장
+      console.log("[BowelRecordService] 저장할 record_date:", koreanDate);
+      console.log(
+        "[BowelRecordService] 실제 시작 시간의 한국 날짜:",
+        actualKoreanDate
+      );
+
+      // 날짜 불일치 확인
+      if (koreanDate !== actualKoreanDate) {
+        console.warn(
+          `[BowelRecordService] 날짜 불일치 주의: 입력된 날짜(${koreanDate})와 시작 시간의 한국 날짜(${actualKoreanDate})가 다릅니다. 입력된 날짜를 우선 사용합니다.`
+        );
+      }
+
+      // 고유한 day_index 값 조회 (같은 날짜에 중복되지 않도록)
+      const { data: existingRecords, error: fetchError } = await supabase
+        .from("bowel_records")
+        .select("day_index")
+        .eq("user_id", currentUser.id)
+        .eq("record_date", koreanDate)
+        .order("day_index", { ascending: false });
+
+      if (fetchError) {
+        console.error(
+          "[BowelRecordService] 기존 인덱스 조회 중 오류:",
+          fetchError
+        );
+        throw fetchError;
+      }
+
+      // 해당 날짜의 최대 day_index 계산 (없으면 1, 있으면 최대값 + 1)
+      let dayIndex = 1;
+      if (existingRecords && existingRecords.length > 0) {
+        const maxDayIndex = Math.max(
+          ...existingRecords.map((r) => r.day_index || 0)
+        );
+        dayIndex = maxDayIndex + 1;
+        console.log(
+          `[BowelRecordService] 기존 최대 day_index: ${maxDayIndex}, 새 day_index: ${dayIndex}`
+        );
+      } else {
+        console.log(
+          `[BowelRecordService] 해당 날짜에 기존 레코드 없음, day_index: ${dayIndex} 사용`
+        );
+      }
+
+      // 레코드 데이터 생성 - 사용자가 선택한 날짜 사용
       const recordData = {
         user_id: currentUser.id,
-        record_date: koreanDate, // 한국 시간 기준 날짜
+        record_date: koreanDate,
         start_time: startTimeIso,
         end_time: endTimeIso,
         duration,
         success: isSuccess,
         amount: isSuccess ? amount : null,
         memo: memo || null,
-        day_index: uniqueIndex, // 고유한 day_index 사용
+        day_index: dayIndex,
       };
+
+      console.log("[BowelRecordService] 저장할 데이터:", recordData);
 
       // 데이터베이스에 저장
       const { data, error } = await supabase
@@ -82,6 +136,9 @@ export class BowelRecordService {
         .single();
 
       if (error) throw error;
+
+      console.log("[BowelRecordService] 저장 성공:", data);
+      console.log("[BowelRecordService] 저장된 record_date:", data.record_date);
 
       return { data: data as BowelRecord, error: null };
     } catch (error) {
