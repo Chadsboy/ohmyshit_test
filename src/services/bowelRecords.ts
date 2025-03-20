@@ -1,18 +1,83 @@
 import { supabase } from "../lib/supabase";
 import { BowelRecord, ServiceResponse } from "../types";
+import { getKoreanDate } from "../utils/dateHelpers";
+import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc";
+import timezone from "dayjs/plugin/timezone";
+
+// dayjs 플러그인 설정
+dayjs.extend(utc);
+dayjs.extend(timezone);
+
+// 한국 시간대
+const KOREA_TIMEZONE = "Asia/Seoul";
 
 // 새로운 배변 기록 생성
 export const createBowelRecord = async (
   data: Omit<BowelRecord, "id" | "created_at" | "record_date" | "day_index">
 ): Promise<ServiceResponse<BowelRecord>> => {
   try {
+    // 타임존 처리: start_time을 한국 날짜로 변환하여 record_date로 설정
+    console.log("[createBowelRecord] 원본 데이터:", data);
+
+    // start_time을 한국 날짜로 변환 (YYYY-MM-DD 형식)
+    const koreanDate = getKoreanDate(data.start_time);
+    console.log(
+      `[createBowelRecord] start_time(${data.start_time})의 한국 날짜:`,
+      koreanDate
+    );
+
+    // day_index 계산을 위해 기존 레코드 조회
+    const { data: existingRecords, error: fetchError } = await supabase
+      .from("bowel_records")
+      .select("day_index")
+      .eq("user_id", data.user_id)
+      .eq("record_date", koreanDate)
+      .order("day_index", { ascending: false });
+
+    if (fetchError) {
+      console.error(
+        "[createBowelRecord] 기존 레코드 조회 중 오류:",
+        fetchError
+      );
+      throw fetchError;
+    }
+
+    // 해당 날짜의 최대 day_index 계산 (없으면 1, 있으면 최대값 + 1)
+    let dayIndex = 1;
+    if (existingRecords && existingRecords.length > 0) {
+      const maxDayIndex = Math.max(
+        ...existingRecords.map((r) => r.day_index || 0)
+      );
+      dayIndex = maxDayIndex + 1;
+      console.log(
+        `[createBowelRecord] 기존 최대 day_index: ${maxDayIndex}, 새 day_index: ${dayIndex}`
+      );
+    } else {
+      console.log(
+        `[createBowelRecord] 해당 날짜(${koreanDate})에 기존 레코드 없음, day_index: ${dayIndex} 사용`
+      );
+    }
+
+    // record_date와 day_index 추가
+    const completeData = {
+      ...data,
+      record_date: koreanDate,
+      day_index: dayIndex,
+    };
+
+    console.log("[createBowelRecord] 최종 저장 데이터:", completeData);
+
     const { data: record, error } = await supabase
       .from("bowel_records")
-      .insert([data])
+      .insert([completeData])
       .select("*")
       .single();
 
     if (error) throw error;
+
+    console.log("[createBowelRecord] 저장 성공:", record);
+    console.log("[createBowelRecord] 저장된 record_date:", record.record_date);
 
     return { data: record, error: null };
   } catch (error) {
