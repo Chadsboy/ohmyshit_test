@@ -12,6 +12,7 @@ import { supabase } from "./lib/supabase";
 import { CssBaseline } from "@mui/material";
 import { LoadingProvider, useLoading } from "./contexts/LoadingContext";
 import { TimerProvider } from "./contexts/TimerContext";
+import { EventProvider } from "./contexts/EventContext";
 
 // 페이지 임포트
 import Home from "./pages/Home";
@@ -382,14 +383,16 @@ const AppContent = () => {
 
 function App() {
   return (
-    <Router>
-      <LoadingProvider>
-        <TimerProvider>
-          <CssBaseline />
-          <AppContent />
-        </TimerProvider>
-      </LoadingProvider>
-    </Router>
+    <EventProvider>
+      <Router>
+        <LoadingProvider>
+          <TimerProvider>
+            <CssBaseline />
+            <AppContent />
+          </TimerProvider>
+        </LoadingProvider>
+      </Router>
+    </EventProvider>
   );
 }
 
